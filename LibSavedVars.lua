@@ -6,7 +6,7 @@ local libSavedVarsStrings = LIBSAVEDVARS_STRINGS
 LIBSAVEDVARS_STRINGS = nil
 
 --Register LibSavedVars with LibStub
-local MAJOR, MINOR = "LibSavedVars", 1
+local MAJOR, MINOR = "LibSavedVars", 2
 local libSavedVars, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not libSavedVars then return end --the same or newer version of this lib is already loaded into memory
 
@@ -52,7 +52,7 @@ local function deepSavedVarsCopy(source, dest, doNotOverwrite)
 end
 
 function libSavedVars:DeepSavedVarsCopy(source, dest, doNotOverwrite)
-    deepSavedVarsCopy(getmetatable(source).__index, getmetatable(dest).__index)
+    deepSavedVarsCopy(getmetatable(source).__index, getmetatable(dest).__index, doNotOverwrite)
 end
 
 function libSavedVars:Get(addon, key)
