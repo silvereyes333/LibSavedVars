@@ -1,7 +1,7 @@
 ## Title: LibSavedVars
 ## Author: |c99CCEFsilvereyes|r
 ## Description: A library to manage and migrate to addon settings that support scopes per server, per account and per character.
-## Version: 2
+## Version: 3.0
 ## APIVersion: 100024 100025
 ## DependsOn: LibStub
 
@@ -13,5 +13,8 @@
 localization\en.lua
 localization\$(language).lua
 
-; Library file
+; Library
 LibSavedVars.lua
+
+; Data class
+Data.lua
