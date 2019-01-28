@@ -6,7 +6,7 @@ local libSavedVarsStrings = LIBSAVEDVARS_STRINGS
 LIBSAVEDVARS_STRINGS = nil
 
 --Register LibSavedVars with LibStub
-local LIBNAME, LIBVERSION = "LibSavedVars", 40000
+local LIBNAME, LIBVERSION = "LibSavedVars", 40001
 local libSavedVars, oldminor = LibStub:NewLibrary(LIBNAME, LIBVERSION)
 if not libSavedVars then return end --the same or newer version of this lib is already loaded into memory
 
