@@ -1,12 +1,11 @@
 ## Title: LibSavedVars
 ## Author: |c99CCEFsilvereyes|r
 ## Description: A library to manage and migrate to addon settings that support scopes per server, per account and per character.
-## Version: 4.1.0
-## AddOnVersion: 40100
+## Version: 4.2.0
+## AddOnVersion: 40200
 ## IsLibrary: true
 ## APIVersion: 100026 100027
-## DependsOn: LibStub
-## OptionalDependsOn: LibLua5.2
+## OptionalDependsOn: LibLua5.2 LibStub
 
 ## This Add-On is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its affiliates. 
 ## The Elder Scrolls® and related logos are registered trademarks or trademarks of ZeniMax Media Inc. in the 

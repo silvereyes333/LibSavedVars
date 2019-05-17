@@ -8,7 +8,7 @@
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
 local CLASSVERSION = 1.2
-local libSavedVars = LibStub(LIBNAME)
+local libSavedVars = LibSavedVars
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = libSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -383,10 +383,10 @@ end
      
      EXAMPLE:
      
-     local LibSavedVars = LibStub("LibSavedVars")
-     local LAM2         = LibStub("LibAddonMenu-2.0")
+     local LAM2 = LibAddonMenu2 or LibStub("LibAddonMenu-2.0")
+     local LSV  = LibSavedVars or LibStub("LibSavedVars")
      
-     addon.settings = LibSavedVars:New(addon.name .. "_Account", addon.name .. "_Character", addon.defaults, false)
+     addon.settings = LSV:New(addon.name .. "_Account", addon.name .. "_Character", addon.defaults, false)
      
      -- Setup options panel
      local panelData = {

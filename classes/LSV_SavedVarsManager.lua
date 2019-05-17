@@ -7,7 +7,7 @@
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "SavedVarsManager"
 local CLASSVERSION = 1.0
-local libSavedVars = LibStub(LIBNAME)
+local libSavedVars = LibSavedVars
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = libSavedVars:NewClass(CLASSNAME, CLASSVERSION)
