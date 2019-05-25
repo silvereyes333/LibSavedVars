@@ -7,11 +7,10 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.2
-local libSavedVars = LibSavedVars
+local CLASSVERSION = 1.3
 
 -- If a newer version of this class is already loaded, exit
-local class, protected = libSavedVars:NewClass(CLASSNAME, CLASSVERSION)
+local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
 if not class then return end
 
 LSV_Data = class
@@ -301,7 +300,7 @@ function LSV_Data:GetIterator()
     end
     
     local savedVars = LSV_Data.GetActiveSavedVars(self)
-    local rawDataTable = savedVars and libSavedVars:GetRawDataTable(savedVars)
+    local rawDataTable = savedVars and LibSavedVars:GetRawDataTable(savedVars)
     if rawDataTable then
         table.insert(subTables, rawDataTable)
     end
@@ -476,7 +475,7 @@ end
      
      Can be chained with other transformations like :Version(), :RemoveSettings() and :RenameSettings().
      
-     See LibSavedVars.lua => libSavedVars:Migrate() for full documentation, since this method works the same, just 
+     See LibSavedVars.lua => LibSavedVars:Migrate() for full documentation, since this method works the same, just 
      without the toSavedVarsInfo parameters.
   ]]--
 function LSV_Data:MigrateFrom(fromSavedVarsInfo, copyToAllServers)
@@ -711,9 +710,9 @@ function LSV_Data:SetAccountSavedVarsActive(accountActive, initializeCharacterWi
             protected.Debug("<<1>>: <<2>>", debugMode, key, tostring(value))
         end
         
-        libSavedVars:DeepSavedVarsCopy(accountVars, characterRawDataTable, DO_NOT_OVERWRITE)
+        LibSavedVars:DeepSavedVarsCopy(accountVars, characterRawDataTable, DO_NOT_OVERWRITE)
     else
-        libSavedVars:DeepSavedVarsCopy(ds.character.defaults, characterRawDataTable, DO_NOT_OVERWRITE)
+        LibSavedVars:DeepSavedVarsCopy(ds.character.defaults, characterRawDataTable, DO_NOT_OVERWRITE)
     end
     
     return self
@@ -839,7 +838,7 @@ if LibLua52 then
         
         local savedVars = LSV_Data.GetActiveSavedVars(data)
         if savedVars then
-            local rawDataTable = libSavedVars:GetRawDataTable(savedVars)
+            local rawDataTable = LibSavedVars:GetRawDataTable(savedVars)
             return ipairs(rawDataTable)
         end
     end
@@ -940,12 +939,12 @@ end
 --[[
      **DEPRECATED**
      See LibSavedVars.lua 
-         => libSavedVars:Migrate()
-         => libSavedVars:MigrateAccountWide
-         => libSavedVars:MigrateCharacterId()
-         => libSavedVars:MigrateCharacterName()
-         => libSavedVars:MigrateCharacterNameToId() 
-         => libSavedVars:MigrateToMegaserverProfiles()
+         => LibSavedVars:Migrate()
+         => LibSavedVars:MigrateAccountWide
+         => LibSavedVars:MigrateCharacterId()
+         => LibSavedVars:MigrateCharacterName()
+         => LibSavedVars:MigrateCharacterNameToId() 
+         => LibSavedVars:MigrateToMegaserverProfiles()
          
      See classes/LSV_SavedVarsManager.lua 
          => LSV_SavedVarsManager:RegisterMigrateStartCallback() 
@@ -990,8 +989,8 @@ function LSV_Data:Migrate(legacySavedVars, newSavedVars, beforeCallback, addon, 
         return
     end
     
-    local fromSavedVarsInfo = libSavedVars:GetInfo(legacySavedVars)
-    legacySavedVars = libSavedVars:GetRawDataTable(legacySavedVars)
+    local fromSavedVarsInfo = LibSavedVars:GetInfo(legacySavedVars)
+    legacySavedVars = LibSavedVars:GetRawDataTable(legacySavedVars)
     
     if legacySavedVars and legacySavedVars.libSavedVarsMigrated then
         legacySavedVars[LIBNAME] = legacySavedVars[LIBNAME] or { }
@@ -1003,7 +1002,7 @@ function LSV_Data:Migrate(legacySavedVars, newSavedVars, beforeCallback, addon, 
     end
     
     if newSavedVars then
-        if libSavedVars:IsZOSavedVars(newSavedVars) then
+        if LibSavedVars:IsZOSavedVars(newSavedVars) then
             newSavedVars = { newSavedVars }
         end
     elseif self.__dataSource.account and self.__dataSource.defaultToAccount then
@@ -1022,7 +1021,7 @@ function LSV_Data:Migrate(legacySavedVars, newSavedVars, beforeCallback, addon, 
         return
     end
     
-    libSavedVars:ClearSavedVars(legacySavedVars)
+    LibSavedVars:ClearSavedVars(legacySavedVars)
     legacySavedVars[LIBNAME] = legacySavedVars[LIBNAME] or {}
     legacySavedVars[LIBNAME].migrated = true
 end

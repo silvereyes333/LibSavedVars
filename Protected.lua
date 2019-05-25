@@ -4,14 +4,13 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Protected"
-local CLASSVERSION = 1.0
-local libSavedVars = LibStub(LIBNAME)
+local CLASSVERSION = 1.1
 
 -- If a newer version of this class is already loaded, exit
-local protected = libSavedVars:NewClass(CLASSNAME, CLASSVERSION)
+local protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
 if not protected then return end
 
--- When set to true, enables verbose log messages in the chat window.  Enable/disable with libSavedVars:SetDebugMode().
+-- When set to true, enables verbose log messages in the chat window.  Enable/disable with LibSavedVars:SetDebugMode().
 local debugMode = false
 
 protected.debugMode = debugMode
@@ -237,7 +236,7 @@ function protected.Migrate(defaultKeyType, fromSavedVarsInfo, toSavedVarsInfo1, 
                 protected.Debug("Setting to raw saved vars parent table "..tostring(i) 
                     .." (" .. tostring(to.rawSavedVarsTableParent) .. ") key "..tostring(to.rawSavedVarsTableKey)
                     .." to the from raw saved vars table (" .. tostring(from.rawSavedVarsTable) .. ")")
-                libSavedVars:DeepSavedVarsCopy(from.rawSavedVarsTable, to.rawSavedVarsTableParent[to.rawSavedVarsTableKey])
+                LibSavedVars:DeepSavedVarsCopy(from.rawSavedVarsTable, to.rawSavedVarsTableParent[to.rawSavedVarsTableKey])
                 to.rawSavedVarsTableParent[to.rawSavedVarsTableKey].version = from.rawSavedVarsTable.version
             end
         end
@@ -276,7 +275,7 @@ function protected.MigrateToMegaserverProfiles(defaultKeyType, fromSavedVarsInfo
     
     local profiles
     if isAccountWide and (copyToAllServers == nil or copyToAllServers)  then
-        profiles = libSavedVars:GetWorldNames()
+        profiles = LibSavedVars:GetWorldNames()
     else
         profiles = { GetWorldName() }
     end

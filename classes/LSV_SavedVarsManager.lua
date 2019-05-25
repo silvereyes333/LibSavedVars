@@ -6,11 +6,10 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "SavedVarsManager"
-local CLASSVERSION = 1.0
-local libSavedVars = LibSavedVars
+local CLASSVERSION = 1.1
 
 -- If a newer version of this class is already loaded, exit
-local class, protected = libSavedVars:NewClass(CLASSNAME, CLASSVERSION)
+local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
 if not class then return end
 
 LSV_SavedVarsManager = class
@@ -36,7 +35,7 @@ local fireLazyLoadCallbacks, unregisterAllLazyLoadCallbacks, unregisterAllMigrat
 ---------------------------------------
 
 function LSV_SavedVarsManager:IsProfileWorldName()
-    local isProfileWorldName = ZO_IsElementInNumericallyIndexedTable(libSavedVars:GetWorldNames(), self.profile)
+    local isProfileWorldName = ZO_IsElementInNumericallyIndexedTable(LibSavedVars:GetWorldNames(), self.profile)
     protected.Debug("LSV_SavedVarsManager:IsProfileWorldName() == " .. tostring(isProfileWorldName) 
       .. " (self.profile==" .. tostring(self.profile) .. ")", debugMode)
     return isProfileWorldName

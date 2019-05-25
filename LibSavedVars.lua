@@ -8,7 +8,7 @@ LIBSAVEDVARS_STRINGS = nil
 local libSavedVars
 if LibStub then
     --Register LibSavedVars with LibStub
-    local LIBNAME, LIBVERSION = "LibSavedVars", 40200
+    local LIBNAME, LIBVERSION = "LibSavedVars", 40201
     libSavedVars = LibStub:NewLibrary(LIBNAME, LIBVERSION)
     if not libSavedVars then return end --the same or newer version of this lib is already loaded into memory
 else
@@ -61,7 +61,7 @@ end
      
      savedVars: the ZO_SavedVars table to clear
   ]]--
-function libSavedVars:ClearSavedVars(savedVars)
+function LibSavedVars:ClearSavedVars(savedVars)
     local dataTable = self:GetRawDataTable(savedVars)
     for key, value in pairs(dataTable) do
         if key ~= "version" and type(value) ~= "function" then
@@ -78,7 +78,7 @@ end
      destination:    The ZO_SavedVars instance to copy values to
      doNotOverwrite: (optional) If true, only vars that equal nil in the destination will be copied. default: false.
   ]]--
-function libSavedVars:DeepSavedVarsCopy(source, destination, doNotOverwrite)
+function LibSavedVars:DeepSavedVarsCopy(source, destination, doNotOverwrite)
     
     -- Get rid of the annoying ZO_SavedVars interface crap to deal with the data directly
     source      = self:GetRawDataTable(source)
@@ -112,7 +112,7 @@ end
      
      savedVarName: The name of the saved var table to extract account names from.
   ]]--
-function libSavedVars:GetAccountsAndProfiles(savedVarName)
+function LibSavedVars:GetAccountsAndProfiles(savedVarName)
     local savedVariableTable = _G[savedVarName]
     if type(savedVariableTable) ~= "table" then
         error("Can only apply saved variables to a table")
@@ -174,7 +174,7 @@ end
      rawSavedVarsTableKey:    The key within *rawSavedVarsTableParent* that can be used to lookup rawSavedVarsTable.
                               Usually equals either *namespace*, *characterId*, *characterName* or "$AccountWide"
   ]]--
-function libSavedVars:GetInfo(savedVars)
+function LibSavedVars:GetInfo(savedVars)
     if savedVars == nil then return end
     return savedVarRegistry[savedVars]
 end
@@ -183,7 +183,7 @@ end
      Gets the underlying data table for a ZO_SavedVars instance, since ZO_SavedVars don't support many common table
      operations directly (e.g. pairs/ipairs/next/#).
   ]]--
-function libSavedVars:GetRawDataTable(savedVars)
+function LibSavedVars:GetRawDataTable(savedVars)
     local meta = getmetatable(savedVars)
     return meta and meta.__index or savedVars
 end
@@ -193,7 +193,7 @@ end
      
      environment: "live", "pts", "*" for all, or empty/nil to autodetect
   ]]--
-function libSavedVars:GetWorldNames(environment)
+function LibSavedVars:GetWorldNames(environment)
     if environment == "*" then
         return { unpack(WORLDS["live"]), unpack(WORLDS["pts"]) }
     end
@@ -206,7 +206,7 @@ end
 --[[
      Returns true if the given input is a ZO_SavedVars interface instance; otherwise nil.
   ]]--
-function libSavedVars:IsZOSavedVars(input)
+function LibSavedVars:IsZOSavedVars(input)
     return type(input) == "table" and type(input.GetInterfaceForCharacter) == "function"
 end
 
@@ -254,7 +254,7 @@ end
                                   LIBSAVEDVARS_CHARACTER_ID_KEY.  Defaults to the current character id.
      }
   ]]--
-function libSavedVars:Migrate(defaultKeyType, fromSavedVarsInfo, toSavedVarsInfo1, ...)
+function LibSavedVars:Migrate(defaultKeyType, fromSavedVarsInfo, toSavedVarsInfo1, ...)
     
     local toParams, from = protected.Migrate(defaultKeyType, fromSavedVarsInfo, toSavedVarsInfo1, ...)
     
@@ -267,7 +267,7 @@ end
 --[[
      Same as Migrate, with the assumption that all saved vars involved are account-wide.
   ]]--
-function libSavedVars:MigrateAccountWide(fromSavedVarsInfo, toSavedVarsInfo1, ...)
+function LibSavedVars:MigrateAccountWide(fromSavedVarsInfo, toSavedVarsInfo1, ...)
     
     return self:Migrate(LIBSAVEDVARS_ACCOUNT_KEY, fromSavedVarsInfo, toSavedVarsInfo1, ...)
 end
@@ -275,7 +275,7 @@ end
 --[[
      Same as Migrate, with the assumption that all saved vars involved are character-id-specific.
   ]]--
-function libSavedVars:MigrateCharacterId(fromSavedVarsInfo, toSavedVarsInfo1, ...)
+function LibSavedVars:MigrateCharacterId(fromSavedVarsInfo, toSavedVarsInfo1, ...)
     
     return self:Migrate(LIBSAVEDVARS_CHARACTER_ID_KEY, fromSavedVarsInfo, toSavedVarsInfo1, ...)
 end
@@ -283,7 +283,7 @@ end
 --[[
      Same as Migrate, with the assumption that all saved vars involved are character-name-specific.
   ]]--
-function libSavedVars:MigrateCharacterName(fromSavedVarsInfo, toSavedVarsInfo1, ...)
+function LibSavedVars:MigrateCharacterName(fromSavedVarsInfo, toSavedVarsInfo1, ...)
     
     return self:Migrate(LIBSAVEDVARS_CHARACTER_NAME_KEY, fromSavedVarsInfo, toSavedVarsInfo1, ...)
 end
@@ -291,7 +291,7 @@ end
 --[[
      Same as Migrate, but for migrating character name saved vars to character id ones.
   ]]--
-function libSavedVars:MigrateCharacterNameToId(fromSavedVarsInfo, toSavedVarsInfo1, ...)
+function LibSavedVars:MigrateCharacterNameToId(fromSavedVarsInfo, toSavedVarsInfo1, ...)
     
     fromSavedVarsInfo.keyType = LIBSAVEDVARS_CHARACTER_NAME_KEY
     return self:Migrate(LIBSAVEDVARS_CHARACTER_ID_KEY, fromSavedVarsInfo, toSavedVarsInfo1, ...)
@@ -312,7 +312,7 @@ end
                                    saved vars will be the same as fromSavedVarsInfo, except with megaserver name as the
                                    profile name.
   ]]--
-function libSavedVars:MigrateToMegaserverProfiles(defaultKeyType, fromSavedVarsInfo, copyToAllServers, toSavedVarsInfo)
+function LibSavedVars:MigrateToMegaserverProfiles(defaultKeyType, fromSavedVarsInfo, copyToAllServers, toSavedVarsInfo)
     
     local toParams, from = protected.MigrateToMegaserverProfiles(defaultKeyType, fromSavedVarsInfo, copyToAllServers, toSavedVarsInfo)
     
@@ -331,7 +331,7 @@ end
      
      See classes/LSV_Data.lua => LSV_Data:AddCharacterSettingsToggle()
   ]]--
-function libSavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
+function LibSavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
     return LSV_Data:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
 end
 
@@ -345,19 +345,19 @@ end
      
      See classes/LSV_Data.lua => LSV_Data:AddAccountWideToggle()
   ]]--
-function libSavedVars:NewCharacterSettings(savedVariableTable, version, namespace, defaults, profile, displayName, 
+function LibSavedVars:NewCharacterSettings(savedVariableTable, version, namespace, defaults, profile, displayName, 
                                            characterName, characterId, characterKeyType)
     return LSV_Data:NewCharacterSettings(savedVariableTable, version, namespace, defaults, profile, displayName, 
                                          characterName, characterId, characterKeyType)
 end
 
 --[[
-     Alias of libSavedVars:NewCharacterSettings()
+     Alias of LibSavedVars:NewCharacterSettings()
      For backwards compatibility with v3
   ]]--
-libSavedVars.NewCharacterIdSettings = libSavedVars.NewCharacterSettings
+LibSavedVars.NewCharacterIdSettings = LibSavedVars.NewCharacterSettings
 
-function libSavedVars:SetDebugMode(enable)
+function LibSavedVars:SetDebugMode(enable)
     protected.SetDebugMode(enable)
 end
 
@@ -377,7 +377,7 @@ local classVersions = { }
      conflicts.  Not necessary if people include the LibSavedVars.txt manifest - the ## AddonVersion should take 
      care of versioning - but I can't assume people won't try to bundle this library without the manifest.
   ]]--
-function libSavedVars:NewClass(name, version)
+function LibSavedVars:NewClass(name, version)
     if not classVersions[name] or classVersions[name] < version then
         classVersions[name] = version
         
@@ -450,7 +450,7 @@ local addonInstances = { }
      **DEPRECATED**
      See classes/LSV_Data.lua => LSV_Data:__index(key)
   ]]--
-function libSavedVars:Get(addon, key)
+function LibSavedVars:Get(addon, key)
     if not addonInstances[addon] then return end
     return addonInstances[addon][key]
 end
@@ -459,28 +459,28 @@ end
      **DEPRECATED**
      See classes/LSV_Data.lua => LSV_Data:GetLibAddonMenuSetting(default)
   ]]--
-function libSavedVars:GetLibAddonMenuSetting(addon, default)
+function LibSavedVars:GetLibAddonMenuSetting(addon, default)
     if not addonInstances[addon] then return end
     return addonInstances[addon]:GetLibAddonMenuAccountCheckbox(default)
 end
 
 --[[
      **DEPRECATED**
-     See libSavedVars:NewCharacterSettings()
-     See libSavedVars:NewAccountWide()
-     See libSavedVars:AddCharacterSettingsToggle()
-     See libSavedVars:AddAccountWideToggle()
+     See LibSavedVars:NewCharacterSettings()
+     See LibSavedVars:NewAccountWide()
+     See LibSavedVars:AddCharacterSettingsToggle()
+     See LibSavedVars:AddAccountWideToggle()
   ]]--
-function libSavedVars:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, useAccountSettingsDefault)
+function LibSavedVars:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, useAccountSettingsDefault)
     return LSV_Data:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, useAccountSettingsDefault)
 end
 
 --[[ 
      **DEPRECATED**
-     See libSavedVars:New()
-     See libSavedVars:Migrate()
+     See LibSavedVars:New()
+     See LibSavedVars:Migrate()
   ]]--
-function libSavedVars:Init(addon, accountSavedVarsName, characterSavedVarsName, defaults, useAccountSettingsDefault,
+function LibSavedVars:Init(addon, accountSavedVarsName, characterSavedVarsName, defaults, useAccountSettingsDefault,
         legacySavedVars, legacyIsAccountWide, legacyMigrationCallback, ...)
     
     local data = self:New(accountSavedVarsName, characterSavedVarsName, defaults, useAccountSettingsDefault)
@@ -499,7 +499,7 @@ end
      **DEPRECATED**
      See classes/LSV_Data.lua => LSV_Data:__newindex(key, value)
   ]]--
-function libSavedVars:Set(addon, key, value)
+function LibSavedVars:Set(addon, key, value)
     if not addonInstances[addon] then return end
     addonInstances[addon][key] = value
 end
@@ -522,7 +522,7 @@ function codeFormat(format, ...)
 end
 
 --[[
-     Helper method for libSavedVars:DeepSavedVarsCopy()
+     Helper method for LibSavedVars:DeepSavedVarsCopy()
   ]]--
 function deepSavedVarsCopy(source, dest, doNotOverwrite)
     for key, value in pairs(source) do
@@ -543,7 +543,7 @@ end
      Adds the given ZO_SavedVars instance and its creation parameters, data table, and lookup path to savedVarRegistry
      to be able to get detailed metadata about the var after the fact.
      
-     See libSavedVars:GetInfo()
+     See LibSavedVars:GetInfo()
   ]]--
 function registerSavedVars(savedVars, savedVariableTableName, version, namespace, defaults, profile, displayName, characterName, characterId, characterKeyType)
     
