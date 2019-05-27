@@ -7,7 +7,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.3
+local CLASSVERSION = 1.4
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -1093,6 +1093,11 @@ function initToggle(self)
         ds.active = ds.account
     else
         ds.active = ds.character
+        
+        -- Ensure that active character settings receive new default values from account scope
+        if not ds.character.defaults or not next(ds.character.defaults) and ds.account.defaults and next(ds.account.defaults) then
+            ds.character.defaults = ds.account.defaults
+        end
     end
     
     ds.character:RegisterLazyLoadCallback(onToggleLazyLoaded, self)

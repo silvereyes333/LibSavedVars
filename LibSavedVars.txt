@@ -1,8 +1,8 @@
 ## Title: LibSavedVars
 ## Author: |c99CCEFsilvereyes|r
 ## Description: A library to manage and migrate to addon settings that support scopes per server, per account and per character.
-## Version: 4.2.1
-## AddOnVersion: 40201
+## Version: 4.2.2
+## AddOnVersion: 40202
 ## IsLibrary: true
 ## APIVersion: 100027 100028
 ## OptionalDependsOn: LibLua5.2 LibStub
