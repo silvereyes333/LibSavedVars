@@ -1,6 +1,6 @@
 local strings = {
     ["SI_LSV_ACCOUNT_WIDE"]    = "Accountweite Einstellungen",
-    ["SI_LSV_ACCOUNT_WIDE_TT"] = "Alle Einstellungen unterhalb sind dieselben für alle deine Figuren.",
+    ["SI_LSV_ACCOUNT_WIDE_TT"] = "Alle Einstellungen sind für alle deine Charaktere identisch.",
 }
 
 -- Overwrite English strings

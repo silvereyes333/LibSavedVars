@@ -5,15 +5,9 @@
 local libSavedVarsStrings = LIBSAVEDVARS_STRINGS
 LIBSAVEDVARS_STRINGS = nil
 
-local libSavedVars
-if LibStub then
-    --Register LibSavedVars with LibStub
-    local LIBNAME, LIBVERSION = "LibSavedVars", 40202
-    libSavedVars = LibStub:NewLibrary(LIBNAME, LIBVERSION)
-    if not libSavedVars then return end --the same or newer version of this lib is already loaded into memory
-else
-    libSavedVars = {}
-end
+local libSavedVars = {
+    version = 50000
+}
 
 LibSavedVars = libSavedVars
 
