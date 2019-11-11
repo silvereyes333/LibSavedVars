@@ -6,7 +6,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "SavedVarsManager"
-local CLASSVERSION = 1.1
+local CLASSVERSION = 1.2
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -43,7 +43,7 @@ end
 
 function LSV_SavedVarsManager:FireMigrateStartCallbacks()
     local scope = LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:FireMigrateStartCallbacks() scope=" .. scope)
+    protected.Debug("LSV_SavedVarsManager:FireMigrateStartCallbacks() scope=" .. scope, debugMode)
     local params = extraMigrateParams[self.id]
     local rawSavedVarsTable = self:LoadRawTableData()
     CALLBACK_MANAGER:FireCallbacks(scope, rawSavedVarsTable, params and protected.NilUnpack(params))
@@ -380,7 +380,7 @@ function LSV_SavedVarsManager:New(data)
     
     setmetatable(manager, self)
     
-    protected.Debug("LSV_SavedVarsManager:New() returning " .. tostring(manager) .. " with [table] field = " .. tostring(manager.table))
+    protected.Debug("LSV_SavedVarsManager:New() returning " .. tostring(manager) .. " with [table] field = " .. tostring(manager.table), debugMode)
     
     nextId = nextId + 1
 

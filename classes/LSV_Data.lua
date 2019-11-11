@@ -7,7 +7,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.4
+local CLASSVERSION = 1.5
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -266,6 +266,14 @@ function LSV_Data:GetActiveSavedVars(key)
     -- Get account pinned vars
     if key ~= nil and ds.account and ds.pinnedAccountKeys and ds.pinnedAccountKeys[key] ~= nil then
         return ds.account.savedVars
+    end
+    
+    if not ds.active then
+        if ds.account then
+            ds.active = ds.account
+        else
+            ds.active = ds.character
+        end
     end
     
     return ds.active and ds.active.savedVars or nil

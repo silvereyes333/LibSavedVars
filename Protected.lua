@@ -4,7 +4,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Protected"
-local CLASSVERSION = 1.1
+local CLASSVERSION = 1.2
 
 -- If a newer version of this class is already loaded, exit
 local protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -48,7 +48,11 @@ function protected.Debug(message, force, ...)
        return
     end
     if select("#", ...) > 0 then
-        message = zo_strformat(message, ...)
+        local params = {...}
+        for i = 1,#params do
+            params[i] = tostring(params[i])
+        end
+        message = zo_strformat(message, unpack(params))
     end
     message = zo_strformat("|c99CCEF<<1>>|r|cFFFFFF: <<2>>|r", LIBNAME, message)
     d(message)
