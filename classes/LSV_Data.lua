@@ -7,7 +7,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.5
+local CLASSVERSION = 1.6
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -455,10 +455,13 @@ function LSV_Data:GetSavedVarsManagers(scope)
     local wildcard = not scope or scope == "*"
     validateScope(scope)
     local ds = self.__dataSource
-    local savedVarManagers = { 
-        (wildcard or scope == "character") and ds.character or nil,
-        (wildcard or scope == "account") and ds.account or nil
-    }
+    local savedVarManagers = { }
+    if (wildcard or scope == "character") and ds.character then
+        table.insert(savedVarManagers, ds.character)
+    end
+    if (wildcard or scope == "account") and ds.account then
+        table.insert(savedVarManagers, ds.account)
+    end
     protected.Debug("<<1>> saved var managers found", debugMode, #savedVarManagers)
     return savedVarManagers
 end
