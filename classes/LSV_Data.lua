@@ -7,7 +7,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.6
+local CLASSVERSION = 1.7
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -441,7 +441,13 @@ function LSV_Data:GetLibAddonMenuAccountCheckbox(initializeCharacterWithAccount)
                       self:LoadAllSavedVars()
                       self:SetAccountSavedVarsActive(value, initializeCharacterWithAccount)
                   end,
-        default = self.__dataSource.defaultToAccount,
+        default = function()
+                      if self.__dataSource.active and rawget(self.__dataSource.active, "savedVars") then
+                          return rawget(self.__dataSource.active, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY
+                      else
+                          return self.__dataSource.defaultToAccount
+                      end
+                  end
     }
 end
 
