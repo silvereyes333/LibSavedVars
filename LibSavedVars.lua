@@ -6,7 +6,7 @@ local libSavedVarsStrings = LIBSAVEDVARS_STRINGS
 LIBSAVEDVARS_STRINGS = nil
 
 local libSavedVars = {
-    version = 50004
+    version = 60000
 }
 
 LibSavedVars = libSavedVars
@@ -174,10 +174,13 @@ function LibSavedVars:GetInfo(savedVars)
 end
 
 --[[
-     Gets the underlying data table for a ZO_SavedVars instance, since ZO_SavedVars don't support many common table
+     Gets the underlying data table for a ZO_SavedVars or LSV_DefaultsTable instance, since ZO_SavedVars don't support many common table
      operations directly (e.g. pairs/ipairs/next/#).
   ]]--
 function LibSavedVars:GetRawDataTable(savedVars)
+    if savedVars.__data then
+        savedVars = savedVars.__data
+    end
     local meta = getmetatable(savedVars)
     return meta and meta.__index or savedVars
 end
@@ -423,79 +426,6 @@ function ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, def
     local savedVars = origSavedVarsNewAccountWide(self, savedVariableTable, version, namespace, defaults, profile, displayName)
     registerSavedVars(savedVars, savedVariableTable, version, namespace, defaults, profile, displayName)
     return savedVars
-end
-
-
-
-----------------------------------------------------------------------------
---
---       Deprecated methods
---
---       The following methods will be removed in a future version.
---       Please migrate to the new methods above and those in 
---       classes/LSV_Data.lua
--- 
-----------------------------------------------------------------------------
-
--- Registry of data instances by addon for v2 backwards compatibility
-local addonInstances = { }
-
---[[
-     **DEPRECATED**
-     See classes/LSV_Data.lua => LSV_Data:__index(key)
-  ]]--
-function LibSavedVars:Get(addon, key)
-    if not addonInstances[addon] then return end
-    return addonInstances[addon][key]
-end
-
---[[ 
-     **DEPRECATED**
-     See classes/LSV_Data.lua => LSV_Data:GetLibAddonMenuSetting(default)
-  ]]--
-function LibSavedVars:GetLibAddonMenuSetting(addon, default)
-    if not addonInstances[addon] then return end
-    return addonInstances[addon]:GetLibAddonMenuAccountCheckbox(default)
-end
-
---[[
-     **DEPRECATED**
-     See LibSavedVars:NewCharacterSettings()
-     See LibSavedVars:NewAccountWide()
-     See LibSavedVars:AddCharacterSettingsToggle()
-     See LibSavedVars:AddAccountWideToggle()
-  ]]--
-function LibSavedVars:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, useAccountSettingsDefault)
-    return LSV_Data:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, useAccountSettingsDefault)
-end
-
---[[ 
-     **DEPRECATED**
-     See LibSavedVars:New()
-     See LibSavedVars:Migrate()
-  ]]--
-function LibSavedVars:Init(addon, accountSavedVarsName, characterSavedVarsName, defaults, useAccountSettingsDefault,
-        legacySavedVars, legacyIsAccountWide, legacyMigrationCallback, ...)
-    
-    local data = self:New(accountSavedVarsName, characterSavedVarsName, defaults, useAccountSettingsDefault)
-    
-    addonInstances[addon]   = data
-    
-    if legacySavedVars then
-        data:Migrate(legacySavedVars, legacyMigrationCallback, addon, ...)
-    end
-    
-    addon.accountSettings   = data.__dataSource.account.savedVars
-    addon.characterSettings = data.__dataSource.character.savedVars
-end
-
---[[ 
-     **DEPRECATED**
-     See classes/LSV_Data.lua => LSV_Data:__newindex(key, value)
-  ]]--
-function LibSavedVars:Set(addon, key, value)
-    if not addonInstances[addon] then return end
-    addonInstances[addon][key] = value
 end
 
 

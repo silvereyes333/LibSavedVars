@@ -6,7 +6,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "SavedVarsManager"
-local CLASSVERSION = 1.2
+local CLASSVERSION = 1.3
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -33,6 +33,10 @@ local fireLazyLoadCallbacks, unregisterAllLazyLoadCallbacks, unregisterAllMigrat
 --       Public Methods
 -- 
 ---------------------------------------
+
+function LSV_SavedVarsManager:EnableDefaultsTrimming()
+    self.isDefaultsTrimmingEnabled = true
+end
 
 function LSV_SavedVarsManager:IsProfileWorldName()
     local isProfileWorldName = ZO_IsElementInNumericallyIndexedTable(LibSavedVars:GetWorldNames(), self.profile)
@@ -321,9 +325,9 @@ function LSV_SavedVarsManager.__index(manager, key)
     
     local pendingVersion = rawget(manager, "pendingVersion")
     if pendingVersion then
-        local rawDataTable = LSV_SavedVarsManager.LoadRawTableData(manager)
-        if rawDataTable then
-            rawDataTable.version = pendingVersion
+        local rawSavedVarsTable = LSV_SavedVarsManager.LoadRawTableData(manager)
+        if rawSavedVarsTable then
+            rawSavedVarsTable.version = pendingVersion
         end
         rawset(manager, "pendingVersion", nil)
         versionUpdateQueue[manager.id] = nil
@@ -332,15 +336,23 @@ function LSV_SavedVarsManager.__index(manager, key)
     local savedVars
     if rawget(manager, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY then
         protected.Debug("Lazy loading new account wide saved vars.", debugMode)
-        savedVars = ZO_SavedVars:NewAccountWide(rawget(manager, "name"), rawget(manager, "version"), 
-                                                rawget(manager, "namespace"), rawget(manager, "defaults"), 
+        savedVars = ZO_SavedVars:NewAccountWide(rawget(manager, "name"), rawget(manager, "version"),
+                                                rawget(manager, "namespace"),
+                                                manager.isDefaultsTrimmingEnabled and {} or rawget(manager, "defaults"),
                                                 rawget(manager, "profile"), rawget(manager, "displayName"))
     else
         protected.Debug("Lazy loading new character-specific saved vars.", debugMode)
-        savedVars = ZO_SavedVars:New(rawget(manager, "name"), rawget(manager, "version"), rawget(manager, "namespace"), 
-                                     rawget(manager, "defaults"), rawget(manager, "profile"), rawget(manager, "displayName"), 
-                                     rawget(manager, "characterName"), rawget(manager, "characterId"), 
+        savedVars = ZO_SavedVars:New(rawget(manager, "name"), rawget(manager, "version"),
+                                     rawget(manager, "namespace"),
+                                     manager.isDefaultsTrimmingEnabled and {} or rawget(manager, "defaults"),
+                                     rawget(manager, "profile"), rawget(manager, "displayName"),
+                                     rawget(manager, "characterName"), rawget(manager, "characterId"),
                                      rawget(manager, "keyType"))
+    end
+    
+    if manager.isDefaultsTrimmingEnabled then
+        local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey = LSV_SavedVarsManager.LoadRawTableData(manager)
+        savedVars = LSV_DefaultsTable:New(rawSavedVarsTable, rawget(manager, "defaults"), rawSavedVarsTableParent, rawSavedVarsTableKey)
     end
     
     rawset(manager, "savedVars", savedVars)

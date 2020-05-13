@@ -7,7 +7,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.7
+local CLASSVERSION = 1.8
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -22,7 +22,7 @@ local DO_NOT_OVERWRITE = true
 local debugMode = false
 
 -- Private member declarations.  Definitions are at the end of the file.
-local defaultIterator, initAccountWide, initCharacterSettings, initToggle, onToggleLazyLoaded, shiftOptionalParams, 
+local initAccountWide, initCharacterSettings, initToggle, onToggleLazyLoaded, shiftOptionalParams, 
       tableDiffKeys, tableFilterKeys, tableMerge, validateScope
 
 -- Lua 5.1 versions of next() and ipairs()
@@ -235,6 +235,18 @@ function LSV_Data:AddCharacterSettingsToggle(savedVariableTableName, version, na
     return self
 end
 
+function LSV_Data:EnableDefaultsTrimming()
+    local ds = rawget(self, "__dataSource")
+    if not ds then return end
+    if ds.account then
+        ds.account:EnableDefaultsTrimming()
+    end
+    if ds.character then
+        ds.character:EnableDefaultsTrimming()
+    end
+    return self
+end
+
 --[[ 
      Returns true if account-wide saved vars are currently toggled on.  When no character-specific settings have been
      specified, always returns true.
@@ -261,11 +273,22 @@ function LSV_Data:GetActiveSavedVars(key)
     if not self then return end
     protected.Debug("LSV_Data:GetActiveSavedVars(<<1>>)", debugMode, key)
     
+    local manager = LSV_Data.GetActiveSavedVarsManager(self, key)
+    return manager and manager.savedVars or nil
+end
+
+--[[ 
+     Returns the internal LSV_SavedVarsManager instance that is active for the currently logged in character.
+  ]]--
+function LSV_Data:GetActiveSavedVarsManager(key)
+    if not self then return end
+    protected.Debug("LSV_Data:GetActiveSavedVarsManager(<<1>>)", debugMode, key)
+    
     local ds = rawget(self, "__dataSource")
     
     -- Get account pinned vars
     if key ~= nil and ds.account and ds.pinnedAccountKeys and ds.pinnedAccountKeys[key] ~= nil then
-        return ds.account.savedVars
+        return ds.account
     end
     
     if not ds.active then
@@ -276,7 +299,7 @@ function LSV_Data:GetActiveSavedVars(key)
         end
     end
     
-    return ds.active and ds.active.savedVars or nil
+    return ds.active
 end
 
 --[[
@@ -299,18 +322,32 @@ function LSV_Data:GetIterator()
     if pinnedKeys and rawnext(pinnedKeys) == nil or LSV_Data.GetAccountSavedVarsActive(self) then
         pinnedKeys = nil
     end
-    if pinnedKeys then
-        local accountRawDataTable = ds.account and ds.account:LoadRawTableData()
-        if accountRawDataTable then
-            local pinnedSettings = tableFilterKeys(accountRawDataTable, pinnedKeys)
-            table.insert(subTables, pinnedSettings)
+    
+    local manager = LSV_Data.GetActiveSavedVarsManager(self)
+    if pinnedKeys and ds.account then
+        if LSV_DefaultsTable and manager.isDefaultsTrimmingEnabled then
+            table.insert(subTables, ds.account.savedVars:Filter(pinnedKeys))
+        else
+            local accountRawDataTable = ds.account:LoadRawTableData()
+            if accountRawDataTable then
+                local pinnedSettings = tableFilterKeys(accountRawDataTable, pinnedKeys)
+                table.insert(subTables, pinnedSettings)
+            end
         end
     end
     
-    local savedVars = LSV_Data.GetActiveSavedVars(self)
-    local rawDataTable = savedVars and LibSavedVars:GetRawDataTable(savedVars)
-    if rawDataTable then
-        table.insert(subTables, rawDataTable)
+    local activeSavedVars = manager and manager.savedVars or nil
+    if activeSavedVars then
+        
+        if LSV_DefaultsTable and manager.isDefaultsTrimmingEnabled then
+            local activeData = activeSavedVars:Except(pinnedKeys)
+            table.insert(subTables, activeData)
+        else
+            local rawDataTable = LibSavedVars:GetRawDataTable(activeSavedVars)
+            if rawDataTable then
+                table.insert(subTables, rawDataTable)
+            end
+        end
     end
     
     table.insert(subTables, { __dataSource = ds })
@@ -337,7 +374,8 @@ function LSV_Data:GetIterator()
             end
             return key, value
         end, 
-        self
+        self,
+        nil
 end
 
 --[[
@@ -728,8 +766,6 @@ function LSV_Data:SetAccountSavedVarsActive(accountActive, initializeCharacterWi
         end
         
         LibSavedVars:DeepSavedVarsCopy(accountVars, characterRawDataTable, DO_NOT_OVERWRITE)
-    else
-        LibSavedVars:DeepSavedVarsCopy(ds.character.defaults, characterRawDataTable, DO_NOT_OVERWRITE)
     end
     
     return self
@@ -844,17 +880,21 @@ end
 --[[
      Allows iterating through the active internal ZO_SavedVars instance for the currently logged in character with the
      ipairs() table iterator method.
-     Requires LibLua5.2 to work.
+     Requires LibLua5.2 to fully work with pairs(), but you can call it directly in vanilla ESOUI with:
+     
+         for index, value in data:__ipairs() do ... end.
   ]]--
-if LibLua52 then
-    function LSV_Data.__ipairs(data)
-        
-        protected.Debug("LSV_Data.__ipairs(<<1>>, <<2>>)", debugMode, data)
-        
-        if not data then return end
-        
-        local savedVars = LSV_Data.GetActiveSavedVars(data)
-        if savedVars then
+function LSV_Data.__ipairs(data)
+    
+    protected.Debug("LSV_Data.__ipairs(<<1>>, <<2>>)", debugMode, data)
+    
+    if not data then return end
+    
+    local savedVars = LSV_Data.GetActiveSavedVars(data)
+    if savedVars then
+        if type(savedVars.__ipairs) == "function" then
+            return savedVars:__ipairs()
+        else
             local rawDataTable = LibSavedVars:GetRawDataTable(savedVars)
             return ipairs(rawDataTable)
         end
@@ -880,167 +920,15 @@ end
 --[[
      Allows iterating through the active internal ZO_SavedVars instance for the currently logged in character with the
      pairs() table iterator method.
-     Requires LibLua5.2 to work.
+     Requires LibLua5.2 to fully work with pairs(), but you can call it directly in vanilla ESOUI with:
+     
+         for key, value in data:__pairs() do ... end.
   ]]--
-if LibLua52 then
-    function LSV_Data.__pairs(data)
-        
-        protected.Debug("LSV_Data.__pairs(<<1>>)", debugMode, data)
-        
-        local iterator
-        iterator, data = LSV_Data.GetIterator(data)
-        return iterator, data, nil
-    end
-end
-
-
-
-----------------------------------------------------------------------------
---
---       Deprecated methods
---
---       The following methods will be removed in a future version.
---       Please migrate to the new methods above and those in LibSavedVars.lua
--- 
-----------------------------------------------------------------------------
-
---[[
-     v3 style all-in-one constructor.  
-     Replaced with NewAccountWide(), NewCharacterSettings(), AddAccountWideToggle() and AddCharacterSettingsToggle().
-  ]]--
-function LSV_Data:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, 
-                      defaultToAccount, profile, displayName, characterName, characterId, characterKeyType)
+function LSV_Data.__pairs(data)
     
-    if accountSavedVarsName == nil and characterSavedVarsName == nil then
-        error("Missing required parameter accountSavedVarsName or characterSavedVarsName.", 2)
-    elseif accountSavedVarsName ~= nil and type(accountSavedVarsName) ~= "string" then
-        error("Expected data type 'string' for parameter accountSavedVarsName. '"..type(accountSavedVarsName).."' given.", 2)
-    elseif characterSavedVarsName ~= nil and type(characterSavedVarsName) ~= "string" then
-        error("Expected data type 'string' for parameter characterSavedVarsName. '"..type(characterSavedVarsName).."' given.", 2)
-    end
+    protected.Debug("LSV_Data.__pairs(<<1>>)", debugMode, data)
     
-    version, namespace, defaults, defaultToAccount, profile, displayName, characterName, characterId, characterKeyType = 
-        shiftOptionalParams(version, namespace, defaults, defaultToAccount, profile, displayName, characterName, characterId, characterKeyType)
-    
-    if accountSavedVarsName == nil then
-        defaultToAccount = nil
-    elseif defaultToAccount == nil then
-        --v2 backwards compatibility
-        if defaults.useAccountSettings ~= nil then
-            defaultToAccount = defaults.useAccountSettings
-        else
-            defaultToAccount = true
-        end
-    end        
-        
-    defaults.useAccountSettings = nil -- clear old v2 default
-    
-    local data
-    if accountSavedVarsName and defaultToAccount then
-        data = self:NewAccountWide(accountSavedVarsName, version, namespace, defaults, profile, displayName)
-    elseif characterSavedVarsName and not defaultToAccount then
-        data = self:NewCharacterSettings(characterSavedVarsName, version, namespace, defaults, profile, displayName, 
-                                         characterName, characterId, characterKeyType)
-    end
-    
-    if accountSavedVarsName and not defaultToAccount then
-        data:AddAccountWideToggle(accountSavedVarsName, version, namespace, defaults, profile, displayName)
-    elseif characterSavedVarsName and defaultToAccount then
-        data:AddCharacterSettingsToggle(characterSavedVarsName, version, namespace, defaults, profile, displayName, 
-                                        characterName, characterId, characterKeyType)
-    end
-    
-    return data
-end
-
---[[
-     **DEPRECATED**
-     See LibSavedVars.lua 
-         => LibSavedVars:Migrate()
-         => LibSavedVars:MigrateAccountWide
-         => LibSavedVars:MigrateCharacterId()
-         => LibSavedVars:MigrateCharacterName()
-         => LibSavedVars:MigrateCharacterNameToId() 
-         => LibSavedVars:MigrateToMegaserverProfiles()
-         
-     See classes/LSV_SavedVarsManager.lua 
-         => LSV_SavedVarsManager:RegisterMigrateStartCallback() 
-         => LSV_SavedVarsManager:UnregisterMigrateStartCallback()
-
-     Moves saved var values from an old legacy saved vars instance into a new saved vars instance or list of instances.
-     
-     Once migrated, the old legacy saved vars are cleared, and a new var called LibSavedVars.migrated is set to true.
-     Successived calls to this method will not migrate again if legacySavedVars.LibSavedVars.migrated is true.
-     
-     legacySavedVars: The ZO_SavedVars instance to migrate to the new savedvars structure in this instance.
-     
-     newSavedVars:    (optional) A ZO_SavedVars instance or array of instances to migrate the legacy saved vars to.
-                                 If nil or not specified, the following logic is used to determine the list:
-                                 
-                                 If self.__dataSource.defaultToAccount is true, then the values are copied to
-                                 account-wide saved vars for both  NA and EU if on live, or just PTS if on PTS.
-                                 
-                                 If self.__dataSource.defaultToAccount is NOT true, then the values are 
-                                 copied to character-specific settings on only the current server.
-     
-     beforeCallback:  (optional) If specified, raised right before data is copied, so that any transformations can be
-                                 run on the old saved vars table before its values are moved.
-                                 Valid signatures include function(addon, legacySavedVars, ...), if addon is not nil,
-                                 or function(legacySavedVars, ...) if addon is nil.
-                                 
-     addon:           (optional) If not nil, will be passed as the first parameter to beforeCallback. 
-                                 Helpful when using callbacks defined on your addon itself, so you can access "self".
-                                 
-     ...:             (optional) Any additional parameters passed will be sent along to beforeCallback(), 
-                                 after the legacySavedVars parameter.
-  ]]--
-function LSV_Data:Migrate(legacySavedVars, newSavedVars, beforeCallback, addon, ...)
-    
-    if not legacySavedVars then
-        return
-    end
-    
-    -- Since newSavedVars is optional, detect if it was omitted entirely instead of being passed as nil
-    if type(newSavedVars) == "function" then
-        self:Migrate(legacySavedVars, nil, newSavedVars, beforeCallback, addon, ...)
-        return
-    end
-    
-    local fromSavedVarsInfo = LibSavedVars:GetInfo(legacySavedVars)
-    legacySavedVars = LibSavedVars:GetRawDataTable(legacySavedVars)
-    
-    if legacySavedVars and legacySavedVars.libSavedVarsMigrated then
-        legacySavedVars[LIBNAME] = legacySavedVars[LIBNAME] or { }
-        legacySavedVars[LIBNAME].migrated = true
-        legacySavedVars.libSavedVarsMigrated = nil
-    end
-    if (legacySavedVars[LIBNAME] and legacySavedVars[LIBNAME].migrated) then
-        return
-    end
-    
-    if newSavedVars then
-        if LibSavedVars:IsZOSavedVars(newSavedVars) then
-            newSavedVars = { newSavedVars }
-        end
-    elseif self.__dataSource.account and self.__dataSource.defaultToAccount then
-          newSavedVars = self.__dataSource.account
-      else
-          newSavedVars = self.__dataSource.character
-      end
-    
-    local from = LSV_SavedVarsManager:New(fromSavedVarsInfo)
-    
-    if beforeCallback and type(beforeCallback) == "function" then
-        from:RegisterMigrateStartCallback(beforeCallback, addon, ...)
-    end
-    
-    if not protected.MigrateToMegaserverProfiles(nil, from, true, newSavedVars) then
-        return
-    end
-    
-    LibSavedVars:ClearSavedVars(legacySavedVars)
-    legacySavedVars[LIBNAME] = legacySavedVars[LIBNAME] or {}
-    legacySavedVars[LIBNAME].migrated = true
+    return LSV_Data.GetIterator(data)
 end
 
 
@@ -1049,8 +937,6 @@ end
 --          Private Members
 -- 
 ---------------------------------------
-
-defaultIterator = LSV_Data.GetIterator(emptyObject)
 
 function initAccountWide(self, savedVariableTable, version, namespace, defaults, profile, displayName)
     
@@ -1198,11 +1084,20 @@ end
 --[[
      Gets a list of all key value pairs in tbl that have corresponding keys in keyTable.
   ]]--
-function tableFilterKeys(tbl, keyTable)
+function tableFilterKeys(tbl, keyTable, defaults)
     local filtered = {}
-    for key, value in pairs(tbl) do
-        if keyTable[key] ~= nil then
-            filtered[key] = value
+    if tbl then
+        for key, value in pairs(tbl) do
+            if keyTable[key] ~= nil then
+                filtered[key] = value
+            end
+        end
+    end
+    if defaults then
+        for key, _ in pairs(keyTable) do
+            if filtered[key] == nil then
+                filtered[key] = defaults[key]
+            end
         end
     end
     return filtered
