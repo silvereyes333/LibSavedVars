@@ -24,14 +24,9 @@ local rawipairs = LibLua52 and LibLua52.rawipairs or ipairs
 ---------------------------------------
 
 function LSV_DefaultsTable:New(data, defaults, parent, parentKey)
-    local children = {}
     defaults = defaults or {}
-    local rawInstance = {
-        __children = children,
-        __defaults = defaults
-    }
-    local instance = setmetatable(rawInstance, self)
-    LSV_DefaultsTable.Initialize(instance, data, parent, parentKey)    
+    local instance = setmetatable({}, self)
+    LSV_DefaultsTable.Initialize(instance, data, defaults, parent, parentKey)    
     return instance
 end
 
@@ -80,11 +75,13 @@ function LSV_DefaultsTable:Except(keys)
     end
     return filtered
 end
-function LSV_DefaultsTable:Initialize(data, parent, parentKey)
+function LSV_DefaultsTable:Initialize(data, defaults, parent, parentKey)
     protected.Debug("LSV_DefaultsTable:Initialize(<<1>>, <<2>>, <<3>>)", debugMode, tostring(data), tostring(parent), parentKey)
-    local children, _, defaults = LSV_DefaultsTable.GetDataSources(self)
+    local children = {}
     local parentIsDefaultsTable = getmetatable(parent) == LSV_DefaultsTable
+    rawset(self, "__children", children)
     rawset(self, "__data", data)
+    rawset(self, "__defaults", defaults)
     rawset(self, "__parent", parent)
     rawset(self, "__parentKey", parentKey)
     rawset(self, "__parentIsDefaultsTable", parentIsDefaultsTable)
@@ -140,7 +137,7 @@ end
 
 function LSV_DefaultsTable:GetDataSources()
     return rawget(self, "__children"), rawget(self, "__data"), rawget(self, "__defaults"), rawget(self, "__parent"), 
-           rawget(self, "__parentKey"), rawget(self, "__parentIsDefaultsTable")
+           rawget(self, "__parentKey"), rawget(self, "__parentIsDefaultsTable"), rawget(self, "__injectForNonDefaults")
 end
 
 function LSV_DefaultsTable:GetIterator()
@@ -218,6 +215,11 @@ function LSV_DefaultsTable:GetNumericIterator()
         end, 
         self,
         0
+end
+
+--[[ Used to inject standard ZO_SavedVars fields like version and $LastCharacterName, as well as the special LibSavedVars field ]]--
+function LSV_DefaultsTable:InjectForNonDefaults(fieldsToInject)
+    rawset(self, "__injectForNonDefaults", fieldsToInject)
 end
 
 function LSV_DefaultsTable:Unpack()

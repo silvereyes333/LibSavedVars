@@ -25,7 +25,7 @@ local LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME = LIBNAME.."MigrateStart"
 local LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME = LIBNAME.."LazyLoad"
 
 -- Local methods
-local fireLazyLoadCallbacks, unregisterAllLazyLoadCallbacks, unregisterAllMigrateStartCallbacks, updatePendingVersionsOnLogout
+local createSavedVarsDefaultsTable, fireLazyLoadCallbacks, unregisterAllLazyLoadCallbacks, unregisterAllMigrateStartCallbacks, updatePendingVersionsOnLogout
 
 
 ---------------------------------------
@@ -334,7 +334,10 @@ function LSV_SavedVarsManager.__index(manager, key)
     end
     
     local savedVars
-    if rawget(manager, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY then
+    if manager.isDefaultsTrimmingEnabled then
+        local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey = LSV_SavedVarsManager.LoadRawTableData(manager)
+        savedVars = createSavedVarsDefaultsTable(manager)
+    elseif rawget(manager, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY then
         protected.Debug("Lazy loading new account wide saved vars.", debugMode)
         savedVars = ZO_SavedVars:NewAccountWide(rawget(manager, "name"), rawget(manager, "version"),
                                                 rawget(manager, "namespace"),
@@ -348,11 +351,6 @@ function LSV_SavedVarsManager.__index(manager, key)
                                      rawget(manager, "profile"), rawget(manager, "displayName"),
                                      rawget(manager, "characterName"), rawget(manager, "characterId"),
                                      rawget(manager, "keyType"))
-    end
-    
-    if manager.isDefaultsTrimmingEnabled then
-        local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey = LSV_SavedVarsManager.LoadRawTableData(manager)
-        savedVars = LSV_DefaultsTable:New(rawSavedVarsTable, rawget(manager, "defaults"), rawSavedVarsTableParent, rawSavedVarsTableKey)
     end
     
     rawset(manager, "savedVars", savedVars)
@@ -406,6 +404,39 @@ end
 --       Private Methods
 -- 
 ---------------------------------------
+
+function createSavedVarsDefaultsTable(self)
+    local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey, rawSavedVarsTablePath = LSV_SavedVarsManager.LoadRawTableData(self)
+    local defaults = {}
+    local defaultsNode = defaults
+    for pathIndex = 1, (#rawSavedVarsTablePath - 1) do
+        local newNode = {}
+        defaultsNode[rawSavedVarsTablePath[pathIndex]] = newNode
+        defaultsNode = newNode
+    end
+    local leafDefaults = ZO_ShallowTableCopy(rawget(self, "defaults") or {})
+    local injectForNonDefaults = {
+      version = rawget(self, "version")
+    }
+    if rawget(self, "keyType") ~= LIBSAVEDVARS_ACCOUNT_KEY then
+        injectForNonDefaults["$LastCharacterName"] = rawget(self, "characterName")
+        leafDefaults[LIBNAME] = { accountSavedVarsActive = false }
+    else
+        leafDefaults[LIBNAME] = { accountSavedVarsActive = true }
+    end
+    leafDefaults:InjectForNonDefaults(injectForNonDefaults)
+    defaultsNode[rawSavedVarsTablePath[#rawSavedVarsTablePath]] = leafDefaults
+    local rootTable = LSV_DefaultsTable:New(rawSavedVarsTable, defaults)
+    local defaultsTables = {rootTable}
+    local parent = rootTable
+    for _, parentKey in ipairs(rawSavedVarsTablePath) do
+        local child = rawget(parent, "__children")[parentKey]
+        table.insert(defaultsTables, child)
+        parent = child
+    end
+    rawset(self, "defaultsTables", defaultsTables)
+    return defaultsTables[#defaultsTables]
+end
 
 function fireLazyLoadCallbacks(self)
     local scope = LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME .. tostring(self.id)
