@@ -58,9 +58,9 @@ function LSV_SavedVarsManager:LoadRawTableData()
     protected.Debug("LSV_SavedVarsManager:LoadRawTableData()", debugMode)
     
     if self.rawSavedVarsTable and self.rawSavedVarsTableParent and self.rawSavedVarsTableKey 
-       and self.rawSavedVarsTablePath
+       and self.rawSavedVarsTablePath and self.table
     then
-        return self.rawSavedVarsTable, self.rawSavedVarsTableParent, self.rawSavedVarsTableKey, self.rawSavedVarsTablePath
+        return self.rawSavedVarsTable, self.rawSavedVarsTableParent, self.rawSavedVarsTableKey, self.rawSavedVarsTablePath, self.table
     end
     
     if not self.table then
@@ -75,7 +75,7 @@ function LSV_SavedVarsManager:LoadRawTableData()
             protected.GetSavedVarsTable(self.name, self.namespace, self.profile, self.displayName, self.characterName, self.characterId, self.keyType)
     end
     
-    return self.rawSavedVarsTable, self.rawSavedVarsTableParent, self.rawSavedVarsTableKey, self.rawSavedVarsTablePath
+    return self.rawSavedVarsTable, self.rawSavedVarsTableParent, self.rawSavedVarsTableKey, self.rawSavedVarsTablePath, self.table
 end
 
 --[[
@@ -335,7 +335,6 @@ function LSV_SavedVarsManager.__index(manager, key)
     
     local savedVars
     if manager.isDefaultsTrimmingEnabled then
-        local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey = LSV_SavedVarsManager.LoadRawTableData(manager)
         savedVars = createSavedVarsDefaultsTable(manager)
     elseif rawget(manager, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY then
         protected.Debug("Lazy loading new account wide saved vars.", debugMode)
@@ -406,7 +405,7 @@ end
 ---------------------------------------
 
 function createSavedVarsDefaultsTable(self)
-    local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey, rawSavedVarsTablePath = LSV_SavedVarsManager.LoadRawTableData(self)
+    local rawSavedVarsTable, rawSavedVarsTableParent, rawSavedVarsTableKey, rawSavedVarsTablePath, rawSavedVarsTableRoot = LSV_SavedVarsManager.LoadRawTableData(self)
     local defaults = {}
     local defaultsNode = defaults
     for pathIndex = 1, (#rawSavedVarsTablePath - 1) do
@@ -425,7 +424,7 @@ function createSavedVarsDefaultsTable(self)
         leafDefaults[LIBNAME] = { accountSavedVarsActive = true }
     end
     defaultsNode[rawSavedVarsTablePath[#rawSavedVarsTablePath]] = leafDefaults
-    local rootTable = LSV_DefaultsTable:New(rawSavedVarsTable, defaults)
+    local rootTable = LSV_DefaultsTable:New(rawSavedVarsTableRoot, defaults)
     local defaultsTables = {rootTable}
     local parent = rootTable
     for _, parentKey in ipairs(rawSavedVarsTablePath) do
