@@ -80,6 +80,7 @@ function LibSavedVars:DeepSavedVarsCopy(source, destination, doNotOverwrite)
     destination = self:GetRawDataTable(destination)
     
     -- Copy keys from source to destination
+    local pairs = getmetatable(source) == LSV_DefaultsTable and LSV_DefaultsTable.GetIterator or pairs
     for key, value in pairs(source) do
         
         -- Copy nested tables
@@ -175,14 +176,14 @@ function LibSavedVars:GetInfo(savedVars)
 end
 
 --[[
-     Gets the underlying data table for a ZO_SavedVars or LSV_DefaultsTable instance, since ZO_SavedVars don't support many common table
+     Gets the underlying data table for a ZO_SavedVars instance, since ZO_SavedVars don't support many common table
      operations directly (e.g. pairs/ipairs/next/#).
   ]]--
 function LibSavedVars:GetRawDataTable(savedVars)
-    if savedVars.__data then
-        savedVars = savedVars.__data
-    end
     local meta = getmetatable(savedVars)
+    if meta == LSV_DefaultsTable then
+        return savedVars
+    end
     return meta and meta.__index or savedVars
 end
 

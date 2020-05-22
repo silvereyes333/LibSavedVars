@@ -339,7 +339,7 @@ function LSV_Data:GetIterator()
     local activeSavedVars = manager and manager.savedVars or nil
     if activeSavedVars then
         
-        if LSV_DefaultsTable and manager.isDefaultsTrimmingEnabled then
+        if manager.isDefaultsTrimmingEnabled then
             local activeData = activeSavedVars:Except(pinnedKeys)
             table.insert(subTables, activeData)
         else
@@ -751,13 +751,19 @@ function LSV_Data:SetAccountSavedVarsActive(accountActive, initializeCharacterWi
     
     ds.active = ds.character
     
-    local characterRawDataTable = ds.character:LoadRawTableData()
-    
     if initializeCharacterWithAccount and ds.account.savedVars then
         
-        local accountVars = ds.account:LoadRawTableData()
-        if ds.pinnedAccountKeys then
-            accountVars = tableDiffKeys(accountVars, ds.pinnedAccountKeys)
+        local accountVars
+        local characterVars
+        if ds.isDefaultsTrimmingEnabled then
+            accountVars = ds.pinnedAccountKeys and ds.account:Except(ds.pinnedAccountKeys) or ds.account
+            characterVars = ds.character
+        else
+            accountVars = ds.account:LoadRawTableData()
+            characterVars = ds.account:LoadRawTableData()
+            if ds.pinnedAccountKeys then
+                accountVars = tableDiffKeys(accountVars, ds.pinnedAccountKeys)
+            end
         end
         
         protected.Debug("Copying the following settings from account-wide scope to character settings:", debugMode)
@@ -765,7 +771,7 @@ function LSV_Data:SetAccountSavedVarsActive(accountActive, initializeCharacterWi
             protected.Debug("<<1>>: <<2>>", debugMode, key, tostring(value))
         end
         
-        LibSavedVars:DeepSavedVarsCopy(accountVars, characterRawDataTable, DO_NOT_OVERWRITE)
+        LibSavedVars:DeepSavedVarsCopy(accountVars, characterVars, DO_NOT_OVERWRITE)
     end
     
     return self
@@ -1012,18 +1018,14 @@ function onToggleLazyLoaded(self)
     local ds = self.__dataSource
     
     ds.character:UnregisterLazyLoadCallback(onToggleLazyLoaded)
-    local characterRawDataTable = ds.character:LoadRawTableData()
-    if characterRawDataTable[LIBNAME] ~= nil then
-        return
-    end
     
     -- Library character-specific settings
     local libSettings = { }
     
     -- Upgrade from v2 settings
-    if characterRawDataTable.useAccountSettings ~= nil then
+    if ds.character.useAccountSettings ~= nil then
         libSettings.accountSavedVarsActive = characterRawDataTable.useAccountSettings
-        characterRawDataTable.useAccountSettings = nil
+        ds.character.useAccountSettings = nil
         protected.Debug("Migrated existing toggle value: " .. tostring(libSettings.accountSavedVarsActive), debugMode)
     
     -- If no v2 settings exist, use defaultToAccount
@@ -1032,7 +1034,7 @@ function onToggleLazyLoaded(self)
         protected.Debug("No existing settings to migrate. Setting toggle to default: " .. tostring(ds.defaultToAccount), debugMode)
     end
     
-    characterRawDataTable[LIBNAME] = libSettings
+    ds.character[LIBNAME] = libSettings
     
     ds.active = libSettings.accountSavedVarsActive and ds.account or ds.character
     

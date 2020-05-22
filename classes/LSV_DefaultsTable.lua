@@ -91,7 +91,9 @@ function LSV_DefaultsTable:Initialize(data, defaults, parent, parentKey)
     local parentIsDefaultsTable = getmetatable(parent) == LSV_DefaultsTable
     rawset(self, "__children", children)
     rawset(self, "__data", data)
-    rawset(self, "__defaults", defaults)
+    if defaults then
+        rawset(self, "__defaults", defaults)
+    end
     rawset(self, "__parent", parent)
     rawset(self, "__parentKey", parentKey)
     rawset(self, "__parentIsDefaultsTable", parentIsDefaultsTable)
@@ -281,7 +283,7 @@ function LSV_DefaultsTable.__newindex(defaultsTable, key, value)
     if type(value) == "table" then
         -- Automatically attaches itself to defaultsTable as needed. No need to alter children.
         if children[key] then
-            LSV_DefaultsTable.Initialize(children[key], value, defaultsTable, key)
+            LSV_DefaultsTable.Initialize(children[key], value, nil, defaultsTable, key)
         else
             LSV_DefaultsTable:New(value, defaults[key], defaultsTable, key)
         end
