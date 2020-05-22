@@ -32,7 +32,7 @@ end
 
 function LSV_DefaultsTable:AttachChild(key, childDefaultsTable)
     protected.Debug("LSV_DefaultsTable:AttachChild(<<1>>, <<2>>)", debugMode, key, tostring(childDefaultsTable))
-    local children, data, defaults = LSV_DefaultsTable.GetDataSources(self)
+    local children, data, defaults, _, _, _, injectForNonDefaults = LSV_DefaultsTable.GetDataSources(self)
     children[key] = childDefaultsTable
     
     if LSV_DefaultsTable.ContainsNonDefaultValues(childDefaultsTable) then
@@ -43,17 +43,27 @@ function LSV_DefaultsTable:AttachChild(key, childDefaultsTable)
         else
             data[key] = rawChildData
         end
+        if injectForNonDefaults then
+            for injectKey, injectValue in pairs(injectForNonDefaults) do
+                data[injectKey] = injectValue
+            end
+        end
         
     elseif data then
-        data[key] = nil
+        self[key] = nil
     end
 end
 
 function LSV_DefaultsTable:ContainsNonDefaultValues()
     protected.Debug("LSV_DefaultsTable:ContainsNonDefaultValues()", debugMode)
-    local children, data, defaults = LSV_DefaultsTable.GetDataSources(self)
-    if data and next(data) then
-        return true
+    local children, data, defaults, _, _, _, injectForNonDefaults = LSV_DefaultsTable.GetDataSources(self)
+    if data then
+        local key
+        repeat key = next(data, key)
+        until not injectForNonDefaults or injectForNonDefaults[key] == nil
+        if key ~= nil then
+            return true
+        end
     end
     for _, child in pairs(children) do
         if LSV_DefaultsTable.ContainsNonDefaultValues(child) then
@@ -220,6 +230,15 @@ end
 --[[ Used to inject standard ZO_SavedVars fields like version and $LastCharacterName, as well as the special LibSavedVars field ]]--
 function LSV_DefaultsTable:InjectForNonDefaults(fieldsToInject)
     rawset(self, "__injectForNonDefaults", fieldsToInject)
+    if LSV_DefaultsTable.ContainsNonDefaultValues(self) then
+        for key, value in pairs(fieldsToInject) do
+            LSV_DefaultsTable.__newindex(self, key, value)
+        end
+    else
+        for key, value in pairs(fieldsToInject) do
+            LSV_DefaultsTable.__newindex(self, key, nil)
+        end
+    end
 end
 
 function LSV_DefaultsTable:Unpack()

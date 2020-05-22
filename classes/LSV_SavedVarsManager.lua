@@ -424,7 +424,6 @@ function createSavedVarsDefaultsTable(self)
     else
         leafDefaults[LIBNAME] = { accountSavedVarsActive = true }
     end
-    leafDefaults:InjectForNonDefaults(injectForNonDefaults)
     defaultsNode[rawSavedVarsTablePath[#rawSavedVarsTablePath]] = leafDefaults
     local rootTable = LSV_DefaultsTable:New(rawSavedVarsTable, defaults)
     local defaultsTables = {rootTable}
@@ -435,7 +434,9 @@ function createSavedVarsDefaultsTable(self)
         parent = child
     end
     rawset(self, "defaultsTables", defaultsTables)
-    return defaultsTables[#defaultsTables]
+    local leafDefaultsTable = defaultsTables[#defaultsTables]
+    leafDefaultsTable:InjectForNonDefaults(injectForNonDefaults)
+    return leafDefaultsTable
 end
 
 function fireLazyLoadCallbacks(self)

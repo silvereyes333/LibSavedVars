@@ -6,7 +6,8 @@ local libSavedVarsStrings = LIBSAVEDVARS_STRINGS
 LIBSAVEDVARS_STRINGS = nil
 
 local libSavedVars = {
-    version = 60000
+    version = 60000,
+    name = "LibSavedVars"
 }
 
 LibSavedVars = libSavedVars
@@ -36,7 +37,7 @@ local savedVarRegistry = { }
 local currentAddonName
 
 -- Local functions
-local codeFormat, debug, deepSavedVarsCopy, registerSavedVars, toCode
+local codeFormat, debug, deepSavedVarsCopy, registerSavedVars, specialKeys, toCode
 
 -- Create localized strings
 for stringId, value in pairs(libSavedVarsStrings) do
@@ -58,7 +59,7 @@ end
 function LibSavedVars:ClearSavedVars(savedVars)
     local dataTable = self:GetRawDataTable(savedVars)
     for key, value in pairs(dataTable) do
-        if key ~= "version" and type(value) ~= "function" then
+        if not specialKeys[key] and type(value) ~= "function" then
             savedVars[key] = nil
         end
     end
@@ -89,7 +90,7 @@ function LibSavedVars:DeepSavedVarsCopy(source, destination, doNotOverwrite)
             self:DeepSavedVarsCopy(value, destination[key], doNotOverwrite)
             
         -- Copy scalar values
-        elseif key ~= "version" and type(value) ~= "function" then
+        elseif not specialKeys[key] and type(value) ~= "function" then
         
             -- Make sure we don't overwrite destination values, if requested
             if not doNotOverwrite or destination[key] == nil then
@@ -455,7 +456,7 @@ function deepSavedVarsCopy(source, dest, doNotOverwrite)
                 dest[key] = {}
             end
             deepSavedVarsCopy(value, dest[key], doNotOverwrite)
-        elseif key ~= "version" and type(value) ~= "function" then
+        elseif not specialKeys[key] and type(value) ~= "function" then
             if not doNotOverwrite or dest[key] == nil then
                 dest[key] = value
             end
@@ -524,6 +525,12 @@ local function onAddonLoaded(event, name)
 end
 
 EVENT_MANAGER:RegisterForEvent(LIBNAME, EVENT_ADD_ON_LOADED, onAddonLoaded)
+
+specialKeys = {
+    ["version"] = true,
+    [LibSavedVars.name] = true,
+    ["$LastCharacterName"] = true
+}
 
 WORLDS = {
     ["live"] = { "NA Megaserver", "EU Megaserver" },
