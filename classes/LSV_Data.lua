@@ -211,7 +211,7 @@ function LSV_Data:AddCharacterSettingsToggle(savedVariableTableName, version, na
     end
     
     if defaults == nil then
-        defaults = { }
+        defaults = ds.account and ds.account.defaults and ZO_ShallowTableCopy(ds.account.defaults) or {}
     else
         ds.pinnedAccountKeys = tableDiffKeys(ds.account.defaults, defaults)
         local defaultsNotOnAccount = tableDiffKeys(defaults, ds.account.defaults)
