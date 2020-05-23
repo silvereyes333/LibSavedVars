@@ -1013,6 +1013,7 @@ function initToggle(self)
         end
     end
     
+    ds.account:RegisterLazyLoadCallback(onToggleLazyLoaded, self)
     ds.character:RegisterLazyLoadCallback(onToggleLazyLoaded, self)
 end
 
@@ -1021,25 +1022,21 @@ function onToggleLazyLoaded(self)
     
     local ds = self.__dataSource
     
-    ds.character:UnregisterLazyLoadCallback(onToggleLazyLoaded)
-    
-    -- Library character-specific settings
-    local libSettings = { }
-    
-    -- Upgrade from v2 settings
-    if ds.character.useAccountSettings ~= nil then
-        libSettings.accountSavedVarsActive = characterRawDataTable.useAccountSettings
-        ds.character.useAccountSettings = nil
-        protected.Debug("Migrated existing toggle value: " .. tostring(libSettings.accountSavedVarsActive), debugMode)
-    
-    -- If no v2 settings exist, use defaultToAccount
-    else
-        libSettings.accountSavedVarsActive = ds.defaultToAccount
-        protected.Debug("No existing settings to migrate. Setting toggle to default: " .. tostring(ds.defaultToAccount), debugMode)
+    if ds.account then
+        ds.account:UnregisterLazyLoadCallback(onToggleLazyLoaded)
+    end
+    if ds.character then
+        ds.character:UnregisterLazyLoadCallback(onToggleLazyLoaded)
     end
     
-    ds.character.savedVars[LIBNAME] = libSettings
+    protected.Debug("Setting toggle to default: " .. tostring(ds.defaultToAccount), debugMode)
     
+    local libSettings = {
+        accountSavedVarsActive = ds.defaultToAccount
+    }
+    if ds.character then
+        ds.character.savedVars[LIBNAME] = libSettings
+    end
     ds.active = libSettings.accountSavedVarsActive and ds.account or ds.character
     
     protected.Debug("Toggle initialized.", debugMode)

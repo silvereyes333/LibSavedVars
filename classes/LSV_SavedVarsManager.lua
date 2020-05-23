@@ -14,7 +14,7 @@ if not class then return end
 
 LSV_SavedVarsManager = class
 
-local debugMode = false
+local debugMode = true
 local nextId = 1
 local extraLazyLoadParams = {}
 local extraMigrateParams  = {}

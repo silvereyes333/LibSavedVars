@@ -93,6 +93,8 @@ function LSV_DefaultsTable:Initialize(data, defaults, parent, parentKey)
     rawset(self, "__data", data)
     if defaults then
         rawset(self, "__defaults", defaults)
+    else
+        defaults = rawget(self, "__defaults")
     end
     rawset(self, "__parent", parent)
     rawset(self, "__parentKey", parentKey)
