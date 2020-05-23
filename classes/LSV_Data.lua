@@ -755,18 +755,22 @@ function LSV_Data:SetAccountSavedVarsActive(accountActive, initializeCharacterWi
         
         local accountVars
         local characterVars
-        if ds.isDefaultsTrimmingEnabled then
-            accountVars = ds.pinnedAccountKeys and ds.account:Except(ds.pinnedAccountKeys) or ds.account
-            characterVars = ds.character
+        if ds.account.isDefaultsTrimmingEnabled then
+            accountVars = ds.pinnedAccountKeys and ds.account.savedVars:Except(ds.pinnedAccountKeys) or ds.account.savedVars
         else
             accountVars = ds.account:LoadRawTableData()
-            characterVars = ds.account:LoadRawTableData()
             if ds.pinnedAccountKeys then
                 accountVars = tableDiffKeys(accountVars, ds.pinnedAccountKeys)
             end
         end
+        if ds.character.isDefaultsTrimmingEnabled then
+            characterVars = ds.character.savedVars
+        else
+            characterVars = ds.account:LoadRawTableData()
+        end
         
         protected.Debug("Copying the following settings from account-wide scope to character settings:", debugMode)
+        local pairs = getmetatable(accountVars) == LSV_DefaultsTable and LSV_DefaultsTable.GetIterator or pairs
         for key, value in pairs(accountVars) do
             protected.Debug("<<1>>: <<2>>", debugMode, key, tostring(value))
         end
