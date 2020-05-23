@@ -1038,7 +1038,7 @@ function onToggleLazyLoaded(self)
         protected.Debug("No existing settings to migrate. Setting toggle to default: " .. tostring(ds.defaultToAccount), debugMode)
     end
     
-    ds.character[LIBNAME] = libSettings
+    ds.character.savedVars[LIBNAME] = libSettings
     
     ds.active = libSettings.accountSavedVarsActive and ds.account or ds.character
     

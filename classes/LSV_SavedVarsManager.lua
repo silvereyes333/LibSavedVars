@@ -40,14 +40,14 @@ end
 
 function LSV_SavedVarsManager:IsProfileWorldName()
     local isProfileWorldName = ZO_IsElementInNumericallyIndexedTable(LibSavedVars:GetWorldNames(), self.profile)
-    protected.Debug("LSV_SavedVarsManager:IsProfileWorldName() == " .. tostring(isProfileWorldName) 
-      .. " (self.profile==" .. tostring(self.profile) .. ")", debugMode)
+    protected.Debug("LSV_SavedVarsManager.IsProfileWorldName(<<1>>) == " .. tostring(isProfileWorldName) 
+      .. " (self.profile==" .. tostring(self.profile) .. ")", debugMode, self)
     return isProfileWorldName
 end
 
 function LSV_SavedVarsManager:FireMigrateStartCallbacks()
     local scope = LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:FireMigrateStartCallbacks() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.FireMigrateStartCallbacks(<<1>>) scope=" .. scope, debugMode, self)
     local params = extraMigrateParams[self.id]
     local rawSavedVarsTable = self:LoadRawTableData()
     CALLBACK_MANAGER:FireCallbacks(scope, rawSavedVarsTable, params and protected.NilUnpack(params))
@@ -55,7 +55,7 @@ function LSV_SavedVarsManager:FireMigrateStartCallbacks()
 end
 
 function LSV_SavedVarsManager:LoadRawTableData()
-    protected.Debug("LSV_SavedVarsManager:LoadRawTableData()", debugMode)
+    protected.Debug("LSV_SavedVarsManager.LoadRawTableData(<<1>>)", debugMode, self)
     
     if self.rawSavedVarsTable and self.rawSavedVarsTableParent and self.rawSavedVarsTableKey 
        and self.rawSavedVarsTablePath and self.table
@@ -95,7 +95,7 @@ end
   ]]--
 function LSV_SavedVarsManager:RegisterLazyLoadCallback(callback, param1, ...)
     local scope = LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:RegisterLazyLoadCallback() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.RegisterLazyLoadCallback(<<1>>) scope=" .. scope, debugMode, self)
     if select('#', ...) > 0 then
         extraLazyLoadParams[self.id] = protected.NilPack(...)
     end
@@ -120,7 +120,7 @@ end
   ]]--
 function LSV_SavedVarsManager:RegisterMigrateStartCallback(callback, param1, ...)
     local scope = LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:RegisterMigrateStartCallback() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.RegisterMigrateStartCallback(<<1>>) scope=" .. scope, debugMode, self)
     if select('#', ...) > 0 then
         extraMigrateParams[self.id] = protected.NilPack(...)
     end
@@ -139,7 +139,7 @@ function LSV_SavedVarsManager:RemoveSettings(version, settingsToRemove, ...)
         table.insert(params, 1, settingsToRemove)
         settingsToRemove = params
     end
-    protected.Debug("LSV_Data:RemoveSettings(<<1>>, <<2>> (<<3>>))", debugMode, 
+    protected.Debug("LSV_Data.RemoveSettings(<<1>>, <<2>>, <<3>> (<<4>>))", debugMode, self,
                     version, tostring(settingsToRemove), settingsToRemove and #settingsToRemove or nil)
                 
     if not self.version or self.version < version then
@@ -177,7 +177,7 @@ function LSV_SavedVarsManager:RenameSettings(version, renameMap, callback)
         renameMap = version
         version = nil
     end
-    protected.Debug("LSV_SavedVarsManager:RenameSettings(<<1>>, <<2>>, <<3>>)", debugMode, version, renameMap, callback)
+    protected.Debug("LSV_SavedVarsManager.RenameSettings(<<1>>, <<2>>, <<3>>, <<4>>)", debugMode, self, version, renameMap, callback)
                 
     if not self.version or self.version < version then
         self.version = version
@@ -215,7 +215,7 @@ end
 
 
 function LSV_SavedVarsManager:RenameSettingsAndInvert(version, renameMap)
-    protected.Debug("LSV_SavedVarsManager:RenameSettingsAndInvert(<<1>>, <<2>>)", debugMode, version, renameMap)
+    protected.Debug("LSV_SavedVarsManager.RenameSettingsAndInvert(<<1>>, <<2>>, <<3>>)", debugMode, self, version, renameMap)
     return self:RenameSettings(version, renameMap, protected.Invert)
 end
 
@@ -226,7 +226,7 @@ end
   ]]--
 function LSV_SavedVarsManager:UnregisterLazyLoadCallback(callback)
     local scope = LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:UnregisterLazyLoadCallback() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.UnregisterLazyLoadCallback(<<1>>, <<2>>) scope=" .. scope, debugMode, self, callback)
     CALLBACK_MANAGER:UnregisterCallback(scope, callback)
     extraLazyLoadParams[self.id] = nil
 end
@@ -238,13 +238,13 @@ end
   ]]--
 function LSV_SavedVarsManager:UnregisterMigrateStartCallback(callback)
     local scope = LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:UnregisterMigrateStartCallback() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.UnregisterMigrateStartCallback(<<1>>, <<2>>) scope=" .. scope, debugMode, self, callback)
     CALLBACK_MANAGER:UnregisterCallback(scope, callback)
     extraMigrateParams[self.id] = nil
 end
 
 function LSV_SavedVarsManager:Validate()
-    protected.Debug("LSV_SavedVarsManager:Validate()", debugMode)
+    protected.Debug("LSV_SavedVarsManager.Validate(<<1>>)", debugMode, self)
     
     if rawget(self, "table") then
         return true, self
@@ -273,7 +273,7 @@ end
   ]]--
 function LSV_SavedVarsManager:Version(version, onVersionUpdate)
     
-    protected.Debug("LSV_SavedVarsManager:Version(<<1>>, <<2>>)", debugMode, version, onVersionUpdate)
+    protected.Debug("LSV_SavedVarsManager.Version(<<1>>, <<2>>. <<3>>)", debugMode, self, version, onVersionUpdate)
                 
     if not self.version or self.version < version then
         self.version = version
@@ -334,16 +334,20 @@ function LSV_SavedVarsManager.__index(manager, key)
     end
     
     local savedVars
+    if rawget(manager, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY then
+        protected.Debug("Lazy loading new account wide saved vars for <<1>>.", debugMode, manager)
+    else
+        protected.Debug("Lazy loading new character-specific saved vars for <<1>>.", debugMode, manager)
+    end
+    
     if manager.isDefaultsTrimmingEnabled then
         savedVars = createSavedVarsDefaultsTable(manager)
     elseif rawget(manager, "keyType") == LIBSAVEDVARS_ACCOUNT_KEY then
-        protected.Debug("Lazy loading new account wide saved vars.", debugMode)
         savedVars = ZO_SavedVars:NewAccountWide(rawget(manager, "name"), rawget(manager, "version"),
                                                 rawget(manager, "namespace"),
                                                 manager.isDefaultsTrimmingEnabled and {} or rawget(manager, "defaults"),
                                                 rawget(manager, "profile"), rawget(manager, "displayName"))
     else
-        protected.Debug("Lazy loading new character-specific saved vars.", debugMode)
         savedVars = ZO_SavedVars:New(rawget(manager, "name"), rawget(manager, "version"),
                                      rawget(manager, "namespace"),
                                      manager.isDefaultsTrimmingEnabled and {} or rawget(manager, "defaults"),
@@ -440,7 +444,7 @@ end
 
 function fireLazyLoadCallbacks(self)
     local scope = LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:fireLazyLoadCallbacks() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.fireLazyLoadCallbacks(<<1>>) scope=" .. scope, debugMode, self)
     local params = extraLazyLoadParams[self.id]
     CALLBACK_MANAGER:FireCallbacks(scope, params and protected.NilUnpack(params))
     unregisterAllLazyLoadCallbacks(self)
@@ -448,7 +452,7 @@ end
 
 function unregisterAllLazyLoadCallbacks(self)
     local scope = LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:unregisterAllLazyLoadCallbacks() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.unregisterAllLazyLoadCallbacks(<<1>>) scope=" .. scope, debugMode, self)
     CALLBACK_MANAGER:UnregisterAllCallbacks(scope)
     extraLazyLoadParams[self.id] = nil
 end
@@ -469,7 +473,7 @@ end
 
 function unregisterAllMigrateStartCallbacks(self)
     local scope = LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME .. tostring(self.id)
-    protected.Debug("LSV_SavedVarsManager:unregisterAllMigrateStartCallbacks() scope=" .. scope, debugMode)
+    protected.Debug("LSV_SavedVarsManager.unregisterAllMigrateStartCallbacks(<<1>>) scope=" .. scope, debugMode, self)
     CALLBACK_MANAGER:UnregisterAllCallbacks(scope)
     extraMigrateParams[self.id] = nil
 end
