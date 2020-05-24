@@ -7,7 +7,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "Data"
-local CLASSVERSION = 1.7
+local CLASSVERSION = 1.8
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -22,7 +22,7 @@ local DO_NOT_OVERWRITE = true
 local debugMode = false
 
 -- Private member declarations.  Definitions are at the end of the file.
-local defaultIterator, initAccountWide, initCharacterSettings, initToggle, onToggleLazyLoaded, shiftOptionalParams, 
+local initAccountWide, initCharacterSettings, initToggle, onToggleLazyLoaded, shiftOptionalParams, 
       tableDiffKeys, tableFilterKeys, tableMerge, validateScope
 
 -- Lua 5.1 versions of next() and ipairs()
@@ -125,7 +125,7 @@ function LSV_Data:NewCharacterSettings(savedVariableTable, version, namespace, d
     }
     setmetatable(data, self)
     
-    initCharacterSettings(data, savedVariableTable, version, namespace, defaults, profile, displayName, 
+    initCharacterSettings(data, savedVariableTable, version, namespace, defaults, defaults, profile, displayName, 
                           characterName, characterId, characterKeyType)
 
     return data
@@ -163,11 +163,13 @@ function LSV_Data:AddAccountWideToggle(savedVariableTableName, version, namespac
         savedVariableTableName = ds.character.name
     end
     
+    local characterDefaults = ZO_ShallowTableCopy(ds.character.defaults)
+    characterDefaults[LIBNAME] = nil
     if defaults == nil then
-        defaults = ds.character.defaults
+        defaults = characterDefaults
     else
-        ds.pinnedAccountKeys = tableDiffKeys(defaults, ds.character.defaults)
-        defaults             = tableMerge(defaults, ds.character.defaults)
+        ds.pinnedAccountKeys = tableDiffKeys(defaults, characterDefaults)
+        defaults = tableMerge(defaults, characterDefaults)
     end
     
     if profile == nil then
@@ -210,8 +212,10 @@ function LSV_Data:AddCharacterSettingsToggle(savedVariableTableName, version, na
         savedVariableTableName = ds.account.name
     end
     
+    local trimDefaults
     if defaults == nil then
         defaults = { }
+        trimDefaults = ZO_ShallowTableCopy(ds.account.defaults)
     else
         ds.pinnedAccountKeys = tableDiffKeys(ds.account.defaults, defaults)
         local defaultsNotOnAccount = tableDiffKeys(defaults, ds.account.defaults)
@@ -228,10 +232,22 @@ function LSV_Data:AddCharacterSettingsToggle(savedVariableTableName, version, na
         displayName = ds.account.displayName
     end
     
-    initCharacterSettings(self, savedVariableTableName, version, namespace, defaults, profile, displayName, 
+    initCharacterSettings(self, savedVariableTableName, version, namespace, defaults, trimDefaults, profile, displayName, 
                           characterName, characterId, characterKeyType)
     initToggle(self)
     
+    return self
+end
+
+function LSV_Data:EnableDefaultsTrimming()
+    local ds = rawget(self, "__dataSource")
+    if not ds then return end
+    if ds.account then
+        ds.account:EnableDefaultsTrimming()
+    end
+    if ds.character then
+        ds.character:EnableDefaultsTrimming()
+    end
     return self
 end
 
@@ -336,8 +352,9 @@ function LSV_Data:GetIterator()
                 ds.iterator = nil
             end
             return key, value
-        end, 
-        self
+        end,
+        self,
+        nil
 end
 
 --[[
@@ -894,163 +911,11 @@ if LibLua52 then
 end
 
 
-
-----------------------------------------------------------------------------
---
---       Deprecated methods
---
---       The following methods will be removed in a future version.
---       Please migrate to the new methods above and those in LibSavedVars.lua
--- 
-----------------------------------------------------------------------------
-
---[[
-     v3 style all-in-one constructor.  
-     Replaced with NewAccountWide(), NewCharacterSettings(), AddAccountWideToggle() and AddCharacterSettingsToggle().
-  ]]--
-function LSV_Data:New(accountSavedVarsName, characterSavedVarsName, version, namespace, defaults, 
-                      defaultToAccount, profile, displayName, characterName, characterId, characterKeyType)
-    
-    if accountSavedVarsName == nil and characterSavedVarsName == nil then
-        error("Missing required parameter accountSavedVarsName or characterSavedVarsName.", 2)
-    elseif accountSavedVarsName ~= nil and type(accountSavedVarsName) ~= "string" then
-        error("Expected data type 'string' for parameter accountSavedVarsName. '"..type(accountSavedVarsName).."' given.", 2)
-    elseif characterSavedVarsName ~= nil and type(characterSavedVarsName) ~= "string" then
-        error("Expected data type 'string' for parameter characterSavedVarsName. '"..type(characterSavedVarsName).."' given.", 2)
-    end
-    
-    version, namespace, defaults, defaultToAccount, profile, displayName, characterName, characterId, characterKeyType = 
-        shiftOptionalParams(version, namespace, defaults, defaultToAccount, profile, displayName, characterName, characterId, characterKeyType)
-    
-    if accountSavedVarsName == nil then
-        defaultToAccount = nil
-    elseif defaultToAccount == nil then
-        --v2 backwards compatibility
-        if defaults.useAccountSettings ~= nil then
-            defaultToAccount = defaults.useAccountSettings
-        else
-            defaultToAccount = true
-        end
-    end        
-        
-    defaults.useAccountSettings = nil -- clear old v2 default
-    
-    local data
-    if accountSavedVarsName and defaultToAccount then
-        data = self:NewAccountWide(accountSavedVarsName, version, namespace, defaults, profile, displayName)
-    elseif characterSavedVarsName and not defaultToAccount then
-        data = self:NewCharacterSettings(characterSavedVarsName, version, namespace, defaults, profile, displayName, 
-                                         characterName, characterId, characterKeyType)
-    end
-    
-    if accountSavedVarsName and not defaultToAccount then
-        data:AddAccountWideToggle(accountSavedVarsName, version, namespace, defaults, profile, displayName)
-    elseif characterSavedVarsName and defaultToAccount then
-        data:AddCharacterSettingsToggle(characterSavedVarsName, version, namespace, defaults, profile, displayName, 
-                                        characterName, characterId, characterKeyType)
-    end
-    
-    return data
-end
-
---[[
-     **DEPRECATED**
-     See LibSavedVars.lua 
-         => LibSavedVars:Migrate()
-         => LibSavedVars:MigrateAccountWide
-         => LibSavedVars:MigrateCharacterId()
-         => LibSavedVars:MigrateCharacterName()
-         => LibSavedVars:MigrateCharacterNameToId() 
-         => LibSavedVars:MigrateToMegaserverProfiles()
-         
-     See classes/LSV_SavedVarsManager.lua 
-         => LSV_SavedVarsManager:RegisterMigrateStartCallback() 
-         => LSV_SavedVarsManager:UnregisterMigrateStartCallback()
-
-     Moves saved var values from an old legacy saved vars instance into a new saved vars instance or list of instances.
-     
-     Once migrated, the old legacy saved vars are cleared, and a new var called LibSavedVars.migrated is set to true.
-     Successived calls to this method will not migrate again if legacySavedVars.LibSavedVars.migrated is true.
-     
-     legacySavedVars: The ZO_SavedVars instance to migrate to the new savedvars structure in this instance.
-     
-     newSavedVars:    (optional) A ZO_SavedVars instance or array of instances to migrate the legacy saved vars to.
-                                 If nil or not specified, the following logic is used to determine the list:
-                                 
-                                 If self.__dataSource.defaultToAccount is true, then the values are copied to
-                                 account-wide saved vars for both  NA and EU if on live, or just PTS if on PTS.
-                                 
-                                 If self.__dataSource.defaultToAccount is NOT true, then the values are 
-                                 copied to character-specific settings on only the current server.
-     
-     beforeCallback:  (optional) If specified, raised right before data is copied, so that any transformations can be
-                                 run on the old saved vars table before its values are moved.
-                                 Valid signatures include function(addon, legacySavedVars, ...), if addon is not nil,
-                                 or function(legacySavedVars, ...) if addon is nil.
-                                 
-     addon:           (optional) If not nil, will be passed as the first parameter to beforeCallback. 
-                                 Helpful when using callbacks defined on your addon itself, so you can access "self".
-                                 
-     ...:             (optional) Any additional parameters passed will be sent along to beforeCallback(), 
-                                 after the legacySavedVars parameter.
-  ]]--
-function LSV_Data:Migrate(legacySavedVars, newSavedVars, beforeCallback, addon, ...)
-    
-    if not legacySavedVars then
-        return
-    end
-    
-    -- Since newSavedVars is optional, detect if it was omitted entirely instead of being passed as nil
-    if type(newSavedVars) == "function" then
-        self:Migrate(legacySavedVars, nil, newSavedVars, beforeCallback, addon, ...)
-        return
-    end
-    
-    local fromSavedVarsInfo = LibSavedVars:GetInfo(legacySavedVars)
-    legacySavedVars = LibSavedVars:GetRawDataTable(legacySavedVars)
-    
-    if legacySavedVars and legacySavedVars.libSavedVarsMigrated then
-        legacySavedVars[LIBNAME] = legacySavedVars[LIBNAME] or { }
-        legacySavedVars[LIBNAME].migrated = true
-        legacySavedVars.libSavedVarsMigrated = nil
-    end
-    if (legacySavedVars[LIBNAME] and legacySavedVars[LIBNAME].migrated) then
-        return
-    end
-    
-    if newSavedVars then
-        if LibSavedVars:IsZOSavedVars(newSavedVars) then
-            newSavedVars = { newSavedVars }
-        end
-    elseif self.__dataSource.account and self.__dataSource.defaultToAccount then
-          newSavedVars = self.__dataSource.account
-      else
-          newSavedVars = self.__dataSource.character
-      end
-    
-    local from = LSV_SavedVarsManager:New(fromSavedVarsInfo)
-    
-    if beforeCallback and type(beforeCallback) == "function" then
-        from:RegisterMigrateStartCallback(beforeCallback, addon, ...)
-    end
-    
-    if not protected.MigrateToMegaserverProfiles(nil, from, true, newSavedVars) then
-        return
-    end
-    
-    LibSavedVars:ClearSavedVars(legacySavedVars)
-    legacySavedVars[LIBNAME] = legacySavedVars[LIBNAME] or {}
-    legacySavedVars[LIBNAME].migrated = true
-end
-
-
 ---------------------------------------
 --
 --          Private Members
 -- 
 ---------------------------------------
-
-defaultIterator = LSV_Data.GetIterator(emptyObject)
 
 function initAccountWide(self, savedVariableTable, version, namespace, defaults, profile, displayName)
     
@@ -1068,7 +933,7 @@ function initAccountWide(self, savedVariableTable, version, namespace, defaults,
         )
 end
 
-function initCharacterSettings(self, savedVariableTable, version, namespace, defaults, profile, displayName, 
+function initCharacterSettings(self, savedVariableTable, version, namespace, defaults, trimDefaults, profile, displayName, 
                                characterName, characterId, characterKeyType)
     
     self.__dataSource.character = 
@@ -1079,6 +944,7 @@ function initCharacterSettings(self, savedVariableTable, version, namespace, def
                 version=version,
                 namespace=namespace,
                 defaults=defaults,
+                trimDefaults=trimDefaults,
                 profile=profile or GetWorldName(),
                 displayName=displayName,
                 characterName=characterName,
@@ -1113,44 +979,17 @@ function initToggle(self)
         
         -- Ensure that active character settings receive new default values from account scope
         if not ds.character.defaults or not next(ds.character.defaults) and ds.account.defaults and next(ds.account.defaults) then
-            ds.character.defaults = ds.account.defaults
+            ds.character.defaults = ZO_ShallowTableCopy(ds.account.defaults)
         end
     end
     
-    ds.character:RegisterLazyLoadCallback(onToggleLazyLoaded, self)
-end
-
-function onToggleLazyLoaded(self)
-    protected.Debug("LSV_Data:onToggleLazyLoaded()", debugMode)
+    ds.character.defaults[LIBNAME] = {
+        accountSavedVarsActive = ds.defaultToAccount
+    }
     
-    local ds = self.__dataSource
-    
-    ds.character:UnregisterLazyLoadCallback(onToggleLazyLoaded)
-    local characterRawDataTable = ds.character:LoadRawTableData()
-    if characterRawDataTable[LIBNAME] ~= nil then
-        return
-    end
-    
-    -- Library character-specific settings
-    local libSettings = { }
-    
-    -- Upgrade from v2 settings
-    if characterRawDataTable.useAccountSettings ~= nil then
-        libSettings.accountSavedVarsActive = characterRawDataTable.useAccountSettings
-        characterRawDataTable.useAccountSettings = nil
-        protected.Debug("Migrated existing toggle value: " .. tostring(libSettings.accountSavedVarsActive), debugMode)
-    
-    -- If no v2 settings exist, use defaultToAccount
-    else
-        libSettings.accountSavedVarsActive = ds.defaultToAccount
-        protected.Debug("No existing settings to migrate. Setting toggle to default: " .. tostring(ds.defaultToAccount), debugMode)
-    end
-    
-    characterRawDataTable[LIBNAME] = libSettings
-    
-    ds.active = libSettings.accountSavedVarsActive and ds.account or ds.character
-    
-    protected.Debug("Toggle initialized.", debugMode)
+    ds.character.trimDefaults[LIBNAME] = {
+        accountSavedVarsActive = ds.defaultToAccount
+    }
 end
 
 function shiftOptionalParams(version, namespace, defaults, defaultToAccount, profile, displayName, characterName, characterId, characterKeyType)

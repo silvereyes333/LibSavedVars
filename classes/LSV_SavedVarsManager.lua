@@ -6,7 +6,7 @@
 
 local LIBNAME      = "LibSavedVars"
 local CLASSNAME    = "SavedVarsManager"
-local CLASSVERSION = 1.2
+local CLASSVERSION = 1.3
 
 -- If a newer version of this class is already loaded, exit
 local class, protected = LibSavedVars:NewClass(CLASSNAME, CLASSVERSION)
@@ -17,15 +17,16 @@ LSV_SavedVarsManager = class
 local debugMode = false
 local nextId = 1
 local extraLazyLoadParams = {}
-local extraMigrateParams  = {}
-local versionUpdateQueue       = {}
+local extraMigrateParams = {}
+local versionUpdateQueue = {}
+local registry = {}
 
 
 local LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME = LIBNAME.."MigrateStart"
 local LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME = LIBNAME.."LazyLoad"
 
 -- Local methods
-local fireLazyLoadCallbacks, unregisterAllLazyLoadCallbacks, unregisterAllMigrateStartCallbacks, updatePendingVersionsOnLogout
+local fillDefaults, fireLazyLoadCallbacks, onLogout, onLogoutCanceled, trimDefaults, unregisterAllLazyLoadCallbacks, unregisterAllMigrateStartCallbacks
 
 
 ---------------------------------------
@@ -33,6 +34,10 @@ local fireLazyLoadCallbacks, unregisterAllLazyLoadCallbacks, unregisterAllMigrat
 --       Public Methods
 -- 
 ---------------------------------------
+
+function LSV_SavedVarsManager:EnableDefaultsTrimming()
+    self.isDefaultsTrimmingEnabled = true
+end
 
 function LSV_SavedVarsManager:IsProfileWorldName()
     local isProfileWorldName = ZO_IsElementInNumericallyIndexedTable(LibSavedVars:GetWorldNames(), self.profile)
@@ -321,9 +326,9 @@ function LSV_SavedVarsManager.__index(manager, key)
     
     local pendingVersion = rawget(manager, "pendingVersion")
     if pendingVersion then
-        local rawDataTable = LSV_SavedVarsManager.LoadRawTableData(manager)
-        if rawDataTable then
-            rawDataTable.version = pendingVersion
+        local rawSavedVarsTable = LSV_SavedVarsManager.LoadRawTableData(manager)
+        if rawSavedVarsTable then
+            rawSavedVarsTable.version = pendingVersion
         end
         rawset(manager, "pendingVersion", nil)
         versionUpdateQueue[manager.id] = nil
@@ -363,7 +368,8 @@ function LSV_SavedVarsManager:New(data)
         name                    = data.name,
         keyType                 = data.keyType or LIBSAVEDVARS_CHARACTER_NAME_KEY,
         version                 = data.version or 1,
-        defaults                = data.defaults or { },
+        defaults                = data.defaults or {},
+        trimDefaults            = data.trimDefaults or data.defaults or {},
         namespace               = data.namespace,
         profile                 = data.profile,
         displayName             = data.displayName or GetDisplayName(),
@@ -381,6 +387,7 @@ function LSV_SavedVarsManager:New(data)
     setmetatable(manager, self)
     
     protected.Debug("LSV_SavedVarsManager:New() returning " .. tostring(manager) .. " with [table] field = " .. tostring(manager.table), debugMode)
+    registry[nextId] = manager
     
     nextId = nextId + 1
 
@@ -395,12 +402,95 @@ end
 -- 
 ---------------------------------------
 
+function fillDefaults(table, defaults)
+    if table == nil or type(table) ~= "table" or defaults == nil then
+        return
+    end
+    protected.Debug("LSV_SavedVarsManager.fillDefaults(<<1>>, <<2>>)", debugMode, table, defaults)
+    for key, defaultValue in pairs(defaults) do
+        if type(defaultValue) == "table" then
+            if table[key] == nil then
+                table[key] = {}
+            end
+            fillDefaults(table[key], defaultValue)
+        elseif table[key] == nil then
+            table[key] = defaultValue
+        end
+    end
+end
+
 function fireLazyLoadCallbacks(self)
     local scope = LIBSAVEDVARS_LAZY_LOAD_CALLBACK_NAME .. tostring(self.id)
     protected.Debug("LSV_SavedVarsManager:fireLazyLoadCallbacks() scope=" .. scope, debugMode)
     local params = extraLazyLoadParams[self.id]
     CALLBACK_MANAGER:FireCallbacks(scope, params and protected.NilUnpack(params))
     unregisterAllLazyLoadCallbacks(self)
+end
+
+function onLogout()
+    protected.Debug("LSV_SavedVarsManager.onLogout()", debugMode)
+    -- Update pending version before logout
+    for id, savedVarsManager in pairs(versionUpdateQueue) do
+        local rawDataTable = LSV_SavedVarsManager.LoadRawTableData(savedVarsManager)
+        local pendingVersion = rawget(savedVarsManager, "pendingVersion")
+        if pendingVersion then
+            if rawDataTable then
+                rawDataTable.version = pendingVersion
+            end
+            rawset(savedVarsManager, "pendingVersion", nil)
+        end
+    end
+    versionUpdateQueue = {}
+    
+    for id, savedVarsManager in pairs(registry) do
+        if savedVarsManager.isDefaultsTrimmingEnabled then
+            local rawDataTable, _, _, rawSavedVarsTablePath = LSV_SavedVarsManager.LoadRawTableData(savedVarsManager)
+            local defaults = savedVarsManager.trimDefaults
+            if rawDataTable and defaults then
+                trimDefaults(rawDataTable, defaults)
+                local nextKey = nil
+                repeat
+                    nextKey = next(rawDataTable, nextKey)
+                until nextKey ~= "version" and nextKey ~= "$LastCharacterName"
+                if nextKey == nil then
+                    rawDataTable.version = nil
+                    rawDataTable["$LastCharacterName"] = nil
+                    protected.UnsetPath(savedVarsManager.table, unpack(rawSavedVarsTablePath))
+                end
+            end
+        end
+    end
+end
+
+function onLogoutCanceled()
+    protected.Debug("LSV_SavedVarsManager.onLogoutCanceled()", debugMode)
+    for id, savedVarsManager in pairs(registry) do
+        if savedVarsManager.isDefaultsTrimmingEnabled then
+            local rawDataTable, _, _, rawSavedVarsTablePath = LSV_SavedVarsManager.LoadRawTableData(savedVarsManager)
+            local defaults = savedVarsManager.trimDefaults
+            if rawDataTable and defaults then
+                fillDefaults(rawDataTable, defaults)
+            end
+        end
+    end
+end
+
+function trimDefaults(table, defaults)
+    if table == nil or type(table) ~= "table" or defaults == nil then
+        return
+    end
+    for key, defaultValue in pairs(defaults) do
+        if type(defaultValue) == "table" then
+            if type(table[key]) == "table" then
+                trimDefaults(table[key], defaultValue)
+                if table[key] and next(table[key]) == nil then
+                    table[key] = nil
+                end
+            end
+        elseif table[key] == defaultValue then
+            table[key] = nil
+        end
+    end
 end
 
 function unregisterAllLazyLoadCallbacks(self)
@@ -410,20 +500,6 @@ function unregisterAllLazyLoadCallbacks(self)
     extraLazyLoadParams[self.id] = nil
 end
 
-function updatePendingVersionsOnLogout()
-    for id, savedVarsManager in pairs(versionUpdateQueue) do
-        local pendingVersion = rawget(savedVarsManager, "pendingVersion")
-        if pendingVersion then
-            local rawDataTable = LSV_SavedVarsManager.LoadRawTableData(savedVarsManager)
-            if rawDataTable then
-                rawDataTable.version = pendingVersion
-            end
-            rawset(savedVarsManager, "pendingVersion", nil)
-        end
-    end
-    versionUpdateQueue = {}
-end
-
 function unregisterAllMigrateStartCallbacks(self)
     local scope = LIBSAVEDVARS_MIGRATE_START_CALLBACK_NAME .. tostring(self.id)
     protected.Debug("LSV_SavedVarsManager:unregisterAllMigrateStartCallbacks() scope=" .. scope, debugMode)
@@ -431,4 +507,6 @@ function unregisterAllMigrateStartCallbacks(self)
     extraMigrateParams[self.id] = nil
 end
 
-EVENT_MANAGER:RegisterForEvent(CLASSNAME, EVENT_PLAYER_DEACTIVATED, updatePendingVersionsOnLogout)
+ZO_PreHook("Logout", onLogout)
+ZO_PreHook("Quit", onLogout)
+ZO_PreHook("CancelLogout", onLogoutCanceled)
