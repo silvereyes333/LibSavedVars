@@ -1,10 +1,10 @@
 ## Title: LibSavedVars
 ## Author: silvereyes
 ## Description: A library to manage and migrate to addon settings that support scopes per server, per account and per character.
-## Version: 6.0.2
-## AddOnVersion: 60002
+## Version: 6.0.3
+## AddOnVersion: 60003
 ## IsLibrary: true
-## APIVersion: 100033
+## APIVersion: 100033 100034
 ## OptionalDependsOn: LibLua5.2
 
 ## This Add-On is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its affiliates. 
