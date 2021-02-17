@@ -971,7 +971,10 @@ function initToggle(self)
     if not characterRawDataTable
        or (characterRawDataTable[LIBNAME] 
            and characterRawDataTable[LIBNAME].accountSavedVarsActive)
-       or (ds.defaultToAccount and not characterRawDataTable[LIBNAME])
+       or (ds.defaultToAccount 
+           and (not characterRawDataTable[LIBNAME] 
+                or characterRawDataTable[LIBNAME].accountSavedVarsActive ~= false)
+          )
     then
         ds.active = ds.account
     else
