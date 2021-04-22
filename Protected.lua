@@ -228,8 +228,10 @@ function protected.Migrate(defaultKeyType, fromSavedVarsInfo, toSavedVarsInfo1, 
             
             -- Create the destination table, if it doesn't exist
             if not to.rawSavedVarsTable then
-                _, to.rawSavedVarsTableParent, to.rawSavedVarsTableKey = 
+                local _, rawSavedVarsTableParent, rawSavedVarsTableKey =
                     protected.CreatePath(to.table, unpack(to.rawSavedVarsTablePath))
+                to.rawSavedVarsTableParent = rawSavedVarsTableParent
+                to.rawSavedVarsTableKey = rawSavedVarsTableKey
                 protected.Debug("To saved vars manager "..tostring(i).." raw table data did not exist.  Created.")
             end
             
