@@ -6,7 +6,7 @@ local libSavedVarsStrings = LIBSAVEDVARS_STRINGS
 LIBSAVEDVARS_STRINGS = nil
 
 local libSavedVars = {
-    version = 60005
+    version = 60006
 }
 
 LibSavedVars = libSavedVars
